@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm -v)",
+      "Bash(npx --version)",
+      "Bash(npx create-expo-app@latest mobile -t expo-template-blank-typescript --yes)",
+      "Bash(cd \"c:/Users/asrin/Desktop/köfte\" && mkdir -p backend/src/routes backend/src/middleware backend/prisma)",
+      "Bash(npx prisma *)",
+      "Bash(npx tsc *)",
+      "Bash(cp .env.example .env)",
+      "Bash(timeout 8 npx tsx src/index.ts)",
+      "Bash(docker --version)",
+      "PowerShell(Get-Process | Where-Object {$_.ProcessName -match 'postgres'} | Select-Object ProcessName,Id; Get-Service | Where-Object {$_.Name -match 'postgres'} | Select-Object Name,Status)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\asrin\\Desktop\\köfte\\backend\\src"
+    ]
+  }
+}
