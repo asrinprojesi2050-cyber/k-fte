@@ -36,7 +36,23 @@ providersRouter.patch("/me", requireAuth, requireRole("provider"), async (req, r
 providersRouter.get("/:id", async (req, res) => {
   const provider = await prisma.provider.findUnique({
     where: { id: req.params.id },
-    include: { category: true, reviews: { orderBy: { createdAt: "desc" }, take: 20 } },
+    include: { 
+      category: true, 
+      reviews: { 
+        orderBy: { createdAt: "desc" }, 
+        take: 20,
+        include: {
+          customer: true,
+          job: {
+            include: {
+              request: {
+                include: { category: true }
+              }
+            }
+          }
+        }
+      } 
+    },
   });
   if (!provider) return res.status(404).json({ error: "Not found" });
   res.json(provider);

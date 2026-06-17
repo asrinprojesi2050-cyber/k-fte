@@ -252,19 +252,22 @@ export default function RequestDetailScreen() {
             .filter((o) => o.status === "PENDING" || o.status === "ACCEPTED" || o.status === "WITHDRAWN")
             .map((offer) => (
               <View key={offer.id} style={[styles.offerCard, offer.status === "ACCEPTED" && styles.offerCardAccepted]}>
-                <View style={styles.offerHeader}>
+                <Pressable 
+                  style={styles.offerHeader}
+                  onPress={() => !isProvider && navigation.navigate("ProviderPublicProfile", { providerId: offer.provider.id })}
+                >
                   <View style={styles.offerAvatar}>
                     <Ionicons name="person" size={20} color={colors.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.offerProvider}>{offer.provider.name}</Text>
+                    <Text style={[styles.offerProvider, !isProvider && { textDecorationLine: "underline" }]}>{offer.provider.name}</Text>
                     <View style={styles.ratingWrap}>
                       <Ionicons name="star" size={12} color={colors.warning} />
                       <Text style={styles.offerRating}>{offer.provider.ratingAvg.toFixed(1)}</Text>
                     </View>
                   </View>
                   <Text style={styles.offerPrice}>{offer.price} MKD</Text>
-                </View>
+                </Pressable>
                 
                 {offer.message && (
                   <View style={styles.messageBox}>

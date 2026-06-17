@@ -3,6 +3,7 @@ import CustomerRequestsScreen from "../screens/customer/CustomerRequestsScreen";
 import RequestDetailScreen from "../screens/RequestDetailScreen";
 import JobDetailScreen from "../screens/JobDetailScreen";
 import ReviewFormScreen from "../screens/customer/ReviewFormScreen";
+import ProviderPublicProfileScreen from "../screens/customer/ProviderPublicProfileScreen";
 import { CustomerRequestsStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<CustomerRequestsStackParamList>();
@@ -29,6 +30,11 @@ export default function CustomerRequestsStack() {
         name="ReviewForm"
         component={ReviewFormScreen}
         options={{ title: "Değerlendir" }}
+      />
+      <Stack.Screen
+        name="ProviderPublicProfile"
+        component={ProviderPublicProfileScreen}
+        options={{ title: "Usta Profili" }}
       />
     </Stack.Navigator>
   );

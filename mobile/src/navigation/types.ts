@@ -19,6 +19,7 @@ export type CustomerRequestsStackParamList = {
   RequestDetail: { requestId: string };
   JobDetail: { jobId: string };
   ReviewForm: { jobId: string; providerName: string };
+  ProviderPublicProfile: { providerId: string };
 };
 
 export type ProviderTabParamList = {
