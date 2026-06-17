@@ -14,7 +14,11 @@ jobsRouter.get("/mine", requireAuth, async (req, res) => {
 
   const jobs = await prisma.job.findMany({
     where,
-    include: { request: true, offer: true, payment: true },
+    include: { 
+      request: { include: { category: true, customer: true } }, 
+      offer: true, 
+      payment: true 
+    },
     orderBy: { startedAt: "desc" },
   });
   res.json(jobs);

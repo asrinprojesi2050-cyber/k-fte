@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { ProviderJobsStackParamList } from "../../navigation/types";
 import ErrorRetry from "../../components/ErrorRetry";
 import { SkeletonList } from "../../components/Skeleton";
+import { useTranslation } from "react-i18next";
 
 interface Job {
   id: string;
@@ -16,13 +17,13 @@ interface Job {
   finalPrice: number;
   createdAt: string;
   completedAt: string | null;
-  request: { description: string; category: { nameTr: string } };
-  customer: { name: string };
+  request: { description: string; category: { nameTr: string; nameEn: string; nameMk: string; nameSq: string }; customer: { name: string } };
 }
 
 type Nav = NativeStackNavigationProp<ProviderJobsStackParamList, "ProviderJobsList">;
 
 export default function ProviderJobsScreen() {
+  const { t, i18n } = useTranslation();
   const { auth } = useAuth();
   const navigation = useNavigation<Nav>();
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -72,6 +73,14 @@ export default function ProviderJobsScreen() {
     }
   }
 
+  const getCategoryName = (cat: any) => {
+    const lang = i18n.language;
+    if (lang === "en") return cat.nameEn || cat.nameTr;
+    if (lang === "mk") return cat.nameMk || cat.nameTr;
+    if (lang === "sq") return cat.nameSq || cat.nameTr;
+    return cat.nameTr;
+  };
+
   return (
     <FlatList
       style={styles.container}
@@ -92,14 +101,14 @@ export default function ProviderJobsScreen() {
           onPress={() => navigation.navigate("JobDetail", { jobId: item.id })}
         >
           <View style={styles.cardHeader}>
-            <Text style={styles.category}>{item.request.category.nameTr}</Text>
+            <Text style={styles.category}>{getCategoryName(item.request.category)}</Text>
             <View style={[styles.badge, { backgroundColor: statusColor(item.status) }]}>
               <Text style={styles.badgeText}>{statusLabel(item.status)}</Text>
             </View>
           </View>
           <Text style={styles.description} numberOfLines={2}>{item.request.description}</Text>
           <View style={styles.cardFooter}>
-            <Text style={styles.customer}>{item.customer.name}</Text>
+            <Text style={styles.customer}>{item.request.customer.name}</Text>
             <Text style={styles.amount}>{item.finalPrice} MKD</Text>
           </View>
         </Pressable>
