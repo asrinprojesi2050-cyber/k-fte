@@ -27,7 +27,9 @@ interface JobDetail {
     status: string;
     category: { nameTr: string };
     customerId: string;
+    customer: { name: string; phone: string };
   };
+  provider: { id: string; name: string; phone: string; ratingAvg: number };
   offer: { price: number; message: string | null };
   payment: { status: string } | null;
   review: { id: string; rating: number } | null;
@@ -37,7 +39,7 @@ export default function JobDetailScreen() {
   const { auth } = useAuth();
   const toast = useToast();
   const route = useRoute<RouteProp<Record<string, { jobId: string }>, string>>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { jobId } = route.params;
 
   const [job, setJob] = useState<JobDetail | null>(null);
@@ -85,7 +87,7 @@ export default function JobDetailScreen() {
   }
 
   function handleReview() {
-    (navigation as any).navigate("ReviewForm", { jobId, providerName: "Usta" });
+    (navigation as any).navigate("ReviewForm", { jobId, providerName: job?.provider.name });
   }
 
   if (loading) {
@@ -138,12 +140,26 @@ export default function JobDetailScreen() {
         <Text style={styles.amount}>{job.finalPrice} MKD</Text>
       </View>
 
-      <View style={styles.infoRow}>
-        <Ionicons name={isProvider ? "person-outline" : "construct-outline"} size={18} color={colors.primary} />
-        <Text style={styles.infoText}>
-          {isProvider ? "Müşteri ile çalışıyorsun" : "Usta takımda"}
-        </Text>
-      </View>
+      <Pressable 
+        style={styles.infoCard}
+        onPress={() => {
+          if (!isProvider) {
+            navigation.navigate("ProviderPublicProfile", { providerId: job.provider.id });
+          }
+        }}
+      >
+        <Ionicons name={isProvider ? "person" : "construct"} size={24} color={colors.primary} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.infoLabel}>{isProvider ? "Müşteri" : "Usta"}</Text>
+          <Text style={[styles.infoValue, !isProvider && { color: colors.primary, textDecorationLine: "underline" }]}>
+            {isProvider ? job.request.customer.name : job.provider.name}
+          </Text>
+          <Text style={styles.infoSubtext}>
+            {isProvider ? job.request.customer.phone : job.provider.phone}
+          </Text>
+        </View>
+        {!isProvider && <Ionicons name="chevron-forward" size={20} color={colors.border} />}
+      </Pressable>
 
       {job.offer.message && (
         <View style={styles.messageBox}>
@@ -202,8 +218,12 @@ const styles = StyleSheet.create({
   badge: { alignSelf: "flex-start", borderRadius: borderRadius.sm, paddingHorizontal: 10, paddingVertical: 3 },
   badgeText: { color: "#fff", fontSize: 12, fontWeight: "600" },
   amount: { fontSize: 24, fontWeight: "bold", color: colors.primary },
-  infoRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.md },
-  infoText: { fontSize: 15, color: colors.text, flex: 1 },
+  
+  infoCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.card, padding: spacing.lg, borderRadius: borderRadius.lg, marginBottom: spacing.lg },
+  infoLabel: { fontSize: 13, color: colors.textSecondary, fontWeight: "600", marginBottom: 2 },
+  infoValue: { fontSize: 17, color: colors.text, fontWeight: "bold", marginBottom: 2 },
+  infoSubtext: { fontSize: 14, color: colors.textMuted },
+  
   messageBox: { backgroundColor: colors.card, borderRadius: borderRadius.md, padding: spacing.lg, marginBottom: spacing.lg },
   messageLabel: { fontSize: 13, fontWeight: "600", color: colors.textSecondary, marginBottom: spacing.xs },
   messageText: { fontSize: 15, color: colors.text, lineHeight: 22 },

@@ -28,7 +28,8 @@ jobsRouter.get("/:id", requireAuth, async (req, res) => {
   const job = await prisma.job.findUnique({
     where: { id: req.params.id },
     include: {
-      request: { include: { category: true } },
+      request: { include: { category: true, customer: true } },
+      provider: true,
       offer: true,
       payment: true,
       review: true,
