@@ -5,10 +5,13 @@ import jwt from "jsonwebtoken";
 
 const logger = pino({ transport: { target: "pino-pretty" } });
 
+let ioInstance: Server | null = null;
+
 export const setupSocket = (httpServer: HttpServer) => {
   const io = new Server(httpServer, {
     cors: { origin: "*" },
   });
+  ioInstance = io;
 
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
@@ -25,28 +28,24 @@ export const setupSocket = (httpServer: HttpServer) => {
   });
 
   io.on("connection", (socket: Socket) => {
-    logger.info(`Socket connected: ${socket.id}`);
+    const user = (socket as any).user;
+    logger.info(`Socket connected: ${socket.id} (User: ${user?.id || user?.userId})`);
+
+    // Auto-join user room for personal notifications
+    const userId = user.id || user.userId;
+    if (userId) {
+      socket.join(`user_${userId}`);
+      logger.info(`Socket ${socket.id} joined personal room user_${userId}`);
+    }
 
     socket.on("join_request_room", (requestId: string) => {
       socket.join(`request_${requestId}`);
       logger.info(`Socket ${socket.id} joined room request_${requestId}`);
     });
 
-    socket.on("send_message", (data: { requestId: string; text: string; senderRole: string }) => {
-      const { requestId, text, senderRole } = data;
-      const user = (socket as any).user;
-      
-      // In a real app, you would also save the message to DB here
-      // But since we have a POST /api/chat route, the client might call the REST API to save,
-      // and use socket.io just to broadcast, OR we save it here.
-      // For now, let's just broadcast it to the room.
-      io.to(`request_${requestId}`).emit("receive_message", {
-        requestId,
-        text,
-        senderRole,
-        senderId: user.userId,
-        createdAt: new Date().toISOString(),
-      });
+    socket.on("leave_request_room", (requestId: string) => {
+      socket.leave(`request_${requestId}`);
+      logger.info(`Socket ${socket.id} left room request_${requestId}`);
     });
 
     socket.on("disconnect", () => {
@@ -55,4 +54,11 @@ export const setupSocket = (httpServer: HttpServer) => {
   });
 
   return io;
+};
+
+export const getIO = () => {
+  if (!ioInstance) {
+    throw new Error("Socket.io not initialized!");
+  }
+  return ioInstance;
 };

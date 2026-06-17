@@ -9,6 +9,8 @@ import CustomerTabs from "./CustomerTabs";
 import ProviderTabs from "./ProviderTabs";
 import { AuthStackParamList } from "./types";
 
+import { SocketProvider } from "../context/SocketContext";
+
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 
 export default function RootNavigator() {
@@ -23,16 +25,18 @@ export default function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
-      {auth ? (
-        auth.role === "customer" ? <CustomerTabs /> : <ProviderTabs />
-      ) : (
-        <AuthStack.Navigator>
-          <AuthStack.Screen name="RoleSelect" component={RoleSelectScreen} options={{ headerShown: false }} />
-          <AuthStack.Screen name="Phone" component={PhoneScreen} options={{ title: "" }} />
-          <AuthStack.Screen name="Otp" component={OtpScreen} options={{ title: "" }} />
-        </AuthStack.Navigator>
-      )}
-    </NavigationContainer>
+    <SocketProvider>
+      <NavigationContainer>
+        {auth ? (
+          auth.role === "customer" ? <CustomerTabs /> : <ProviderTabs />
+        ) : (
+          <AuthStack.Navigator>
+            <AuthStack.Screen name="RoleSelect" component={RoleSelectScreen} options={{ headerShown: false }} />
+            <AuthStack.Screen name="Phone" component={PhoneScreen} options={{ title: "" }} />
+            <AuthStack.Screen name="Otp" component={OtpScreen} options={{ title: "" }} />
+          </AuthStack.Navigator>
+        )}
+      </NavigationContainer>
+    </SocketProvider>
   );
 }

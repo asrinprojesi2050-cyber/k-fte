@@ -15,11 +15,11 @@ import {
 import { useRoute, RouteProp } from "@react-navigation/native";
 import { useAuth } from "../../context/AuthContext";
 import { fetchMessages, sendMessage, Message } from "../../api/chat";
-
-import { io, Socket } from "socket.io-client";
+import { useSocket } from "../../context/SocketContext";
 
 export default function ChatDetailScreen() {
   const { auth } = useAuth();
+  const { socket, connected } = useSocket();
   const route = useRoute<RouteProp<Record<string, { requestId: string; otherName: string }>, string>>();
   const { requestId, otherName } = route.params;
 
@@ -30,7 +30,6 @@ export default function ChatDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const flatRef = useRef<FlatList>(null);
   const prevCount = useRef(0);
-  const socketRef = useRef<Socket | null>(null);
 
   const loadMessages = useCallback(async (isBackground = false) => {
     if (isBackground) setRefreshing(true);
@@ -49,18 +48,11 @@ export default function ChatDetailScreen() {
   useEffect(() => {
     loadMessages();
 
-    // Socket.IO connection
-    const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
-    const socket = io(API_URL, {
-      auth: { token: auth?.token },
-    });
-    socketRef.current = socket;
+    if (!socket || !connected) return;
 
-    socket.on("connect", () => {
-      socket.emit("join_request_room", requestId);
-    });
+    socket.emit("join_request_room", requestId);
 
-    socket.on("receive_message", (msg: Message) => {
+    const handleReceive = (msg: Message) => {
       setMessages((prev) => {
         // Prevent duplicate messages if we just sent it
         if (prev.some((m) => m.id === msg.id || (m.text === msg.text && m.senderId === msg.senderId && Date.now() - new Date(m.createdAt).getTime() < 2000))) {
@@ -70,12 +62,15 @@ export default function ChatDetailScreen() {
       });
       prevCount.current += 1;
       setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 50);
-    });
+    };
+
+    socket.on("receive_message", handleReceive);
 
     return () => {
-      socket.disconnect();
+      socket.off("receive_message", handleReceive);
+      socket.emit("leave_request_room", requestId);
     };
-  }, [loadMessages, requestId, auth?.token]);
+  }, [loadMessages, requestId, socket, connected]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -93,13 +88,10 @@ export default function ChatDetailScreen() {
       setMessages((prev) => [...prev, sent]);
       prevCount.current += 1;
       
-      // Also emit via socket so others get it instantly
-      socketRef.current?.emit("send_message", {
-        requestId,
-        text,
-        senderRole: auth?.role
-      });
-      
+      // We don't need to emit send_message anymore, because chat.routes.ts handles it
+      // But we can if we want immediate local broadcast before REST responds.
+      // However, we changed backend to emit after DB save, so it's safer to rely on REST response.
+
       setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 50);
     } catch {} finally {
       setSending(false);

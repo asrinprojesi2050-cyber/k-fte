@@ -117,6 +117,15 @@ chatRouter.post("/messages/:requestId", requireAuth, async (req, res) => {
     },
   });
 
+  // Emit real-time message to active chat room
+  try {
+    const { getIO } = require("../socket");
+    const io = getIO();
+    io.to(`request_${requestId}`).emit("receive_message", message);
+  } catch (err) {
+    console.warn("Socket.io emit failed:", err);
+  }
+
   const otherRole = role === "customer" ? "provider" : "customer";
   const providerIds = request.offers.map((o) => o.providerId);
   const targetUserId = role === "customer" ? providerIds[0] : request.customerId;
