@@ -58,6 +58,16 @@ export default function ProviderProfileScreen() {
         <Text style={styles.editButtonText}>Profili Düzenle</Text>
       </Pressable>
 
+      {isProvider && (
+        <Pressable 
+          style={styles.publicProfileButton} 
+          onPress={() => navigation.navigate("ProviderPublicProfile", { providerId: user.id })}
+        >
+          <Ionicons name="eye-outline" size={18} color="#fff" />
+          <Text style={styles.publicProfileButtonText}>Genel Profilimi Görüntüle</Text>
+        </Pressable>
+      )}
+
       <View style={styles.divider} />
 
       <Text style={styles.langTitle}>{t("change_language")}</Text>
@@ -95,6 +105,8 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 13, color: colors.textSecondary, marginTop: spacing.xs },
   editButton: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.xl, paddingVertical: 10, paddingHorizontal: 24, borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.primary },
   editButtonText: { fontSize: 15, fontWeight: "600", color: colors.primary },
+  publicProfileButton: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.md, paddingVertical: 12, paddingHorizontal: 24, borderRadius: borderRadius.md, backgroundColor: colors.primary },
+  publicProfileButtonText: { fontSize: 15, fontWeight: "600", color: "#fff" },
   divider: { height: 1, backgroundColor: colors.border, width: "100%", marginVertical: spacing.xxl },
   langTitle: { color: colors.textSecondary, marginBottom: spacing.sm },
   langContainer: { flexDirection: "row", gap: spacing.md },

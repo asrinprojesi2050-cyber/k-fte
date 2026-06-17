@@ -6,7 +6,17 @@ import { requireAuth, requireRole } from "../middleware/auth";
 export const providersRouter = Router();
 
 providersRouter.get("/me", requireAuth, requireRole("provider"), async (req, res) => {
-  const provider = await prisma.provider.findUnique({ where: { id: req.auth!.id } });
+  const provider = await prisma.provider.findUnique({ 
+    where: { id: req.auth!.id },
+    include: {
+      category: true,
+      jobs: {
+        where: { status: "COMPLETED" },
+        include: { request: { include: { category: true, customer: true } }, review: true },
+        orderBy: { completedAt: "desc" },
+      }
+    }
+  });
   res.json(provider);
 });
 
@@ -51,7 +61,12 @@ providersRouter.get("/:id", async (req, res) => {
             }
           }
         }
-      } 
+      },
+      jobs: {
+        where: { status: "COMPLETED" },
+        include: { request: { include: { category: true, customer: true } }, review: true },
+        orderBy: { completedAt: "desc" },
+      }
     },
   });
   if (!provider) return res.status(404).json({ error: "Not found" });

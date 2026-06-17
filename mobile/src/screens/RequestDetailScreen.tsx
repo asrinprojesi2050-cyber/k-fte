@@ -97,39 +97,51 @@ export default function RequestDetailScreen() {
     }
   }
 
+  async function executeCancelRequest() {
+    setSubmitting(true);
+    try {
+      await apiFetch(`/api/requests/${requestId}/cancel`, { method: "POST", token: auth?.token });
+      toast.show({ message: "Talep iptal edildi." });
+      navigation.goBack();
+    } catch (e: any) {
+      toast.show({ message: e instanceof ApiError ? e.message : "Bir şey yanlış gitti.", type: "error" });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleCancelRequest() {
+    if (typeof window !== "undefined" && window.confirm) {
+      if (!window.confirm("Bu talebi iptal etmek istediğine emin misin?")) return;
+      return executeCancelRequest();
+    }
     Alert.alert("İptal Et", "Bu talebi iptal etmek istediğine emin misin?", [
       { text: "Vazgeç", style: "cancel" },
-      { text: "İptal Et", style: "destructive", onPress: async () => {
-        setSubmitting(true);
-        try {
-          await apiFetch(`/api/requests/${requestId}/cancel`, { method: "POST", token: auth?.token });
-          toast.show({ message: "Talep iptal edildi." });
-          navigation.goBack();
-        } catch (e: any) {
-          toast.show({ message: e instanceof ApiError ? e.message : "Bir şey yanlış gitti.", type: "error" });
-        } finally {
-          setSubmitting(false);
-        }
-      }},
+      { text: "İptal Et", style: "destructive", onPress: executeCancelRequest },
     ]);
   }
 
+  async function executeWithdrawOffer(offerId: string) {
+    setSubmitting(true);
+    try {
+      await apiFetch(`/api/offers/${offerId}/withdraw`, { method: "POST", token: auth?.token });
+      toast.show({ message: "Teklif geri çekildi." });
+      load();
+    } catch (e: any) {
+      toast.show({ message: e instanceof ApiError ? e.message : "Bir şey yanlış gitti.", type: "error" });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleWithdrawOffer(offerId: string) {
+    if (typeof window !== "undefined" && window.confirm) {
+      if (!window.confirm("Bu teklifi geri çekmek istediğine emin misin?")) return;
+      return executeWithdrawOffer(offerId);
+    }
     Alert.alert("Geri Çek", "Bu teklifi geri çekmek istediğine emin misin?", [
       { text: "Vazgeç", style: "cancel" },
-      { text: "Geri Çek", style: "destructive", onPress: async () => {
-        setSubmitting(true);
-        try {
-          await apiFetch(`/api/offers/${offerId}/withdraw`, { method: "POST", token: auth?.token });
-          toast.show({ message: "Teklif geri çekildi." });
-          load();
-        } catch (e: any) {
-          toast.show({ message: e instanceof ApiError ? e.message : "Bir şey yanlış gitti.", type: "error" });
-        } finally {
-          setSubmitting(false);
-        }
-      }},
+      { text: "Geri Çek", style: "destructive", onPress: () => executeWithdrawOffer(offerId) },
     ]);
   }
 

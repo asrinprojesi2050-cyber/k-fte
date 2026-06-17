@@ -16,6 +16,19 @@ interface ProviderData {
   ratingAvg: number;
   completedJobsCount: number;
   category: { nameTr: string; nameEn: string; nameMk: string; nameSq: string };
+  jobs?: Array<{
+    id: string;
+    completedAt: string;
+    finalPrice: number;
+    request: {
+      category: { nameTr: string; nameEn: string; nameMk: string; nameSq: string };
+      customer: { name: string };
+    };
+    review?: {
+      rating: number;
+      comment: string | null;
+    } | null;
+  }>;
   reviews: Array<{
     id: string;
     rating: number;
@@ -109,38 +122,42 @@ export default function ProviderPublicProfileScreen() {
         </View>
       )}
 
-      <Text style={styles.sectionTitle}>Müşteri Değerlendirmeleri</Text>
-      {provider.reviews && provider.reviews.length > 0 ? (
-        provider.reviews.map((rev) => (
-          <View key={rev.id} style={styles.reviewCard}>
+      <Text style={styles.sectionTitle}>Neler Yaptı? (Tamamlanan İşler)</Text>
+      {provider.jobs && provider.jobs.length > 0 ? (
+        provider.jobs.map((job) => (
+          <View key={job.id} style={styles.reviewCard}>
             <View style={styles.reviewHeader}>
-              <Text style={styles.reviewerName}>{rev.customer.name}</Text>
-              <View style={styles.starsRow}>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Ionicons
-                    key={i}
-                    name={i < rev.rating ? "star" : "star-outline"}
-                    size={14}
-                    color={colors.warning}
-                  />
-                ))}
-              </View>
+              <Text style={styles.reviewerName}>{job.request.customer.name} için yapıldı</Text>
+              {job.review ? (
+                <View style={styles.starsRow}>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Ionicons
+                      key={i}
+                      name={i < job.review!.rating ? "star" : "star-outline"}
+                      size={14}
+                      color={colors.warning}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.reviewDate}>Değerlendirilmedi</Text>
+              )}
             </View>
             
             <Text style={styles.reviewCategory}>
-              İş: {getCategoryName(rev.job?.request?.category)}
+              İş: {getCategoryName(job.request.category)}
             </Text>
 
-            {rev.comment && <Text style={styles.reviewComment}>{rev.comment}</Text>}
+            {job.review?.comment && <Text style={styles.reviewComment}>"{job.review.comment}"</Text>}
             <Text style={styles.reviewDate}>
-              {new Date(rev.createdAt).toLocaleDateString("tr-TR")}
+              {new Date(job.completedAt).toLocaleDateString("tr-TR")}
             </Text>
           </View>
         ))
       ) : (
         <View style={styles.emptyReviews}>
-          <Ionicons name="chatbubbles-outline" size={32} color={colors.border} />
-          <Text style={styles.emptyReviewsText}>Henüz hiç değerlendirme yapılmamış.</Text>
+          <Ionicons name="briefcase-outline" size={32} color={colors.border} />
+          <Text style={styles.emptyReviewsText}>Henüz tamamlanmış bir işi yok.</Text>
         </View>
       )}
     </ScrollView>

@@ -34,6 +34,12 @@ export type ProviderHomeStackParamList = {
   RequestDetail: { requestId: string };
 };
 
+export type ProviderProfileStackParamList = {
+  ProviderProfile: undefined;
+  ProviderProfileEdit: undefined;
+  ProviderPublicProfile: { providerId: string };
+};
+
 export type MessagesStackParamList = {
   ChatList: undefined;
   ChatDetail: { requestId: string; otherName: string };
