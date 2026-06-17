@@ -3,15 +3,15 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const categories = [
-  { slug: "oto-tamir", nameTr: "Oto Tamir", nameMk: "Авто механичар", nameSq: "Riparim auto" },
-  { slug: "ev-temizligi", nameTr: "Ev Temizliği", nameMk: "Чистење на домови", nameSq: "Pastrim shtëpie" },
-  { slug: "boyaci-tadilat", nameTr: "Tadilat & Dekorasyon", nameMk: "Реновирање и Декорација", nameSq: "Rinovim & Dekorim" },
-  { slug: "nakliyat", nameTr: "Nakliye & Eşya Taşıma", nameMk: "Транспорт", nameSq: "Transport" },
-  { slug: "ozel-ders", nameTr: "Özel Ders", nameMk: "Приватни часови", nameSq: "Mësime private" },
-  { slug: "tesisat", nameTr: "Tesisat (Su / Elektrik)", nameMk: "Водовод и Електрика", nameSq: "Hidraulik & Elektrik" },
-  { slug: "fotograf", nameTr: "Fotoğraf & Video", nameMk: "Фотографирање", nameSq: "Fotografi" },
-  { slug: "guzellik", nameTr: "Güzellik & Kuaför", nameMk: "Убавина и Нега", nameSq: "Bukuri & Kujdes" },
-  { slug: "bilgisayar", nameTr: "Bilişim & Bilgisayar", nameMk: "Поправка на компјутери", nameSq: "Riparim kompjuteri" },
+  { slug: "oto-tamir", nameTr: "Oto Tamir", nameEn: "Auto Repair", nameMk: "Авто механичар", nameSq: "Riparim auto" },
+  { slug: "ev-temizligi", nameTr: "Ev Temizliği", nameEn: "House Cleaning", nameMk: "Чистење на домови", nameSq: "Pastrim shtëpie" },
+  { slug: "boyaci-tadilat", nameTr: "Tadilat & Dekorasyon", nameEn: "Renovation & Decor", nameMk: "Реновирање и Декорација", nameSq: "Rinovim & Dekorim" },
+  { slug: "nakliyat", nameTr: "Nakliye & Eşya Taşıma", nameEn: "Moving & Transport", nameMk: "Транспорт", nameSq: "Transport" },
+  { slug: "ozel-ders", nameTr: "Özel Ders", nameEn: "Private Tutoring", nameMk: "Приватни часови", nameSq: "Mësime private" },
+  { slug: "tesisat", nameTr: "Tesisat (Su / Elektrik)", nameEn: "Plumbing & Electrical", nameMk: "Водовод и Електрика", nameSq: "Hidraulik & Elektrik" },
+  { slug: "fotograf", nameTr: "Fotoğraf & Video", nameEn: "Photography & Video", nameMk: "Фотографирање", nameSq: "Fotografi" },
+  { slug: "guzellik", nameTr: "Güzellik & Kuaför", nameEn: "Beauty & Salon", nameMk: "Убавина и Нега", nameSq: "Bukuri & Kujdes" },
+  { slug: "bilgisayar", nameTr: "Bilişim & Bilgisayar", nameEn: "IT & Computers", nameMk: "Поправка на компјутери", nameSq: "Riparim kompjuteri" },
 ];
 
 async function main() {

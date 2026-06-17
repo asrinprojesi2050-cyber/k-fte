@@ -94,6 +94,7 @@ model Category {
   id     String @id @default(uuid())
   slug   String @unique
   nameTr String
+  nameEn String @default("")
   nameMk String
   nameSq String
 

@@ -3,29 +3,32 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AuthStackParamList } from "../../navigation/types";
+import { useTranslation } from "react-i18next";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "RoleSelect">;
 
 export default function RoleSelectScreen({ navigation }: Props) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.logo}>
         <Ionicons name="flame" size={48} color={colors.primary} />
       </View>
       <Text style={styles.title}>Köfte</Text>
-      <Text style={styles.subtitle}>Kuzey Makedonya'nın yerel hizmet platformu</Text>
+      <Text style={styles.subtitle}>{t("app_subtitle")}</Text>
 
       <View style={styles.buttons}>
         <Pressable style={styles.customerButton} onPress={() => navigation.navigate("Phone", { role: "customer" })}>
           <Ionicons name="person-outline" size={24} color="#fff" />
-          <Text style={styles.buttonText}>Müşteriyim</Text>
-          <Text style={styles.buttonHint}>Hizmet almak istiyorum</Text>
+          <Text style={styles.buttonText}>{t("im_customer")}</Text>
+          <Text style={styles.buttonHint}>{t("want_service")}</Text>
         </Pressable>
 
         <Pressable style={styles.providerButton} onPress={() => navigation.navigate("Phone", { role: "provider" })}>
           <Ionicons name="construct-outline" size={24} color="#fff" />
-          <Text style={styles.buttonText}>Ustayım</Text>
-          <Text style={styles.buttonHint}>Hizmet vermek istiyorum</Text>
+          <Text style={styles.buttonText}>{t("im_provider")}</Text>
+          <Text style={styles.buttonHint}>{t("want_provide_service")}</Text>
         </Pressable>
       </View>
     </View>

@@ -5,10 +5,12 @@ import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { requestOtp } from "../../api/auth";
 import { AuthStackParamList } from "../../navigation/types";
+import { useTranslation } from "react-i18next";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Phone">;
 
 export default function PhoneScreen({ route, navigation }: Props) {
+  const { t } = useTranslation();
   const { role } = route.params;
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,7 +18,7 @@ export default function PhoneScreen({ route, navigation }: Props) {
 
   async function handleContinue() {
     if (phone.trim().length < 6) {
-      setError("Geçerli bir telefon numarası girin");
+      setError(t("invalid_phone"));
       return;
     }
     setError(null);
@@ -25,7 +27,7 @@ export default function PhoneScreen({ route, navigation }: Props) {
       await requestOtp(phone.trim());
       navigation.navigate("Otp", { role, phone: phone.trim() });
     } catch (err) {
-      setError("Kod gönderilemedi, tekrar deneyin");
+      setError(t("code_send_failed"));
     } finally {
       setLoading(false);
     }
@@ -34,9 +36,9 @@ export default function PhoneScreen({ route, navigation }: Props) {
   return (
     <View style={styles.container}>
       <Ionicons name="phone-portrait-outline" size={40} color={colors.primary} style={{ marginBottom: spacing.lg }} />
-      <Text style={styles.title}>Telefon numaran</Text>
+      <Text style={styles.title}>{t("your_phone")}</Text>
       <Text style={styles.subtitle}>
-        {role === "customer" ? "Müşteri" : "Usta"} girişi için telefon numaranı doğrulayalım.
+        {role === "customer" ? t("customer_login_subtitle") : t("provider_login_subtitle")}
       </Text>
 
       <TextInput
@@ -52,7 +54,7 @@ export default function PhoneScreen({ route, navigation }: Props) {
       {error && <Text style={styles.error}>{error}</Text>}
 
       <Pressable style={styles.button} onPress={handleContinue} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Kod Gönder</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t("send_code")}</Text>}
       </Pressable>
     </View>
   );

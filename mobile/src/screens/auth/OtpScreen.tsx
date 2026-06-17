@@ -7,10 +7,12 @@ import { fetchCategories, verifyCustomerOtp, verifyProviderOtp } from "../../api
 import { Category } from "../../api/types";
 import { useAuth } from "../../context/AuthContext";
 import { AuthStackParamList } from "../../navigation/types";
+import { useTranslation } from "react-i18next";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Otp">;
 
 export default function OtpScreen({ route }: Props) {
+  const { t, i18n } = useTranslation();
   const { role, phone } = route.params;
   const { signIn } = useAuth();
 
@@ -30,7 +32,7 @@ export default function OtpScreen({ route }: Props) {
 
   async function handleVerify() {
     if (code.trim().length !== 6) {
-      setError("6 haneli kodu girin");
+      setError(t("invalid_code"));
       return;
     }
     setError(null);
@@ -48,17 +50,25 @@ export default function OtpScreen({ route }: Props) {
         await signIn(result);
       }
     } catch (err) {
-      setError("Kod hatalı veya bilgiler eksik. Yeni kullanıcıysan ad, kategori ve şehir gerekli.");
+      setError(t("verify_error"));
     } finally {
       setLoading(false);
     }
   }
 
+  const getCategoryName = (cat: any) => {
+    const lang = i18n.language;
+    if (lang === "en") return cat.nameEn || cat.nameTr;
+    if (lang === "mk") return cat.nameMk || cat.nameTr;
+    if (lang === "sq") return cat.nameSq || cat.nameTr;
+    return cat.nameTr;
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Ionicons name="lock-closed-outline" size={40} color={colors.primary} style={{ marginBottom: spacing.md }} />
-      <Text style={styles.title}>Doğrulama kodu</Text>
-      <Text style={styles.subtitle}>{phone} numarasına gönderilen 6 haneli kodu gir.</Text>
+      <Text style={styles.title}>{t("verification_code")}</Text>
+      <Text style={styles.subtitle}>{t("code_sent_to")} {phone}</Text>
 
       <TextInput
         style={styles.input}
@@ -71,13 +81,13 @@ export default function OtpScreen({ route }: Props) {
         autoFocus
       />
 
-      <Text style={styles.sectionLabel}>İlk kez giriş yapıyorsan:</Text>
-      <TextInput style={styles.input} placeholder="Ad Soyad" placeholderTextColor={colors.textMuted} value={name} onChangeText={setName} />
+      <Text style={styles.sectionLabel}>{t("if_first_time")}</Text>
+      <TextInput style={styles.input} placeholder={t("full_name")} placeholderTextColor={colors.textMuted} value={name} onChangeText={setName} />
 
       {role === "provider" && (
         <>
-          <TextInput style={styles.input} placeholder="Şehir (örn. Üsküp)" placeholderTextColor={colors.textMuted} value={city} onChangeText={setCity} />
-          <Text style={styles.sectionLabel}>Kategori</Text>
+          <TextInput style={styles.input} placeholder={t("city_placeholder")} placeholderTextColor={colors.textMuted} value={city} onChangeText={setCity} />
+          <Text style={styles.sectionLabel}>{t("category")}</Text>
           <View style={styles.chipRow}>
             {categories.map((cat) => (
               <Pressable
@@ -86,7 +96,7 @@ export default function OtpScreen({ route }: Props) {
                 onPress={() => setCategoryId(cat.id)}
               >
                 <Text style={[styles.chipText, categoryId === cat.id && styles.chipTextSelected]}>
-                  {cat.nameTr}
+                  {getCategoryName(cat)}
                 </Text>
               </Pressable>
             ))}
@@ -97,7 +107,7 @@ export default function OtpScreen({ route }: Props) {
       {error && <Text style={styles.error}>{error}</Text>}
 
       <Pressable style={styles.button} onPress={handleVerify} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Devam Et</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t("continue")}</Text>}
       </Pressable>
     </ScrollView>
   );
