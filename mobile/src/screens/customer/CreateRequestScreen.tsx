@@ -79,6 +79,13 @@ export default function CreateRequestScreen() {
   });
 
   useEffect(() => {
+    if (route.params?.categoryId) {
+      setCategoryId(route.params.categoryId);
+      setStep(1);
+    }
+  }, [route.params?.categoryId]);
+
+  useEffect(() => {
     apiFetch<Category[]>("/api/categories")
       .then(setCategories)
       .catch(() => {})
