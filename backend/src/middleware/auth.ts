@@ -1,7 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { prisma } from "../db";
 
-export type AuthRole = "customer" | "provider";
+export type AuthRole = "customer" | "provider" | "admin";
 
 export interface AuthPayload {
   id: string;
@@ -22,7 +23,7 @@ export function signToken(payload: AuthPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "30d" });
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Missing bearer token" });
@@ -30,7 +31,20 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 
   try {
     const token = header.slice("Bearer ".length);
-    req.auth = jwt.verify(token, JWT_SECRET) as AuthPayload;
+    const payload = jwt.verify(token, JWT_SECRET) as AuthPayload;
+    
+    // Check if banned
+    if (payload.role === "customer") {
+      const user = await prisma.user.findUnique({ where: { id: payload.id } });
+      if (user?.isBanned) return res.status(403).json({ error: "Hesabınız askıya alınmıştır." });
+    } else if (payload.role === "provider") {
+      const provider = await prisma.provider.findUnique({ where: { id: payload.id } });
+      if (provider?.isBanned) return res.status(403).json({ error: "Hesabınız askıya alınmıştır." });
+    } else if (payload.role === "admin") {
+      // Admins are not banned
+    }
+
+    req.auth = payload;
     next();
   } catch {
     return res.status(401).json({ error: "Invalid or expired token" });

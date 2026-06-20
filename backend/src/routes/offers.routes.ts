@@ -28,12 +28,13 @@ offersRouter.post("/", requireAuth, requireRole("provider"), async (req, res) =>
       requestId: parsed.data.requestId,
       providerId: req.auth!.id,
       price: parsed.data.price,
+      currency: request.currency,
       message: parsed.data.message,
     },
   });
 
   const provider = await prisma.provider.findUnique({ where: { id: req.auth!.id } });
-  sendToUser(request.customerId, "customer", "Yeni teklif", `${provider?.name ?? "Bir usta"} ${offer.price} EUR teklif verdi.`, { requestId: request.id });
+  sendToUser(request.customerId, "customer", "Yeni teklif", `${provider?.name ?? "Bir usta"} ${offer.price} ${offer.currency} teklif verdi.`, { requestId: request.id });
 
   res.status(201).json(offer);
 });
@@ -70,17 +71,32 @@ offersRouter.post("/:id/accept", requireAuth, requireRole("customer"), async (re
     });
     await tx.request.update({ where: { id: offer.requestId }, data: { status: "MATCHED" } });
 
-    return tx.job.create({
+    const newJob = await tx.job.create({
       data: {
         requestId: offer.requestId,
         offerId: offer.id,
         providerId: offer.providerId,
         finalPrice: offer.price,
+        currency: offer.currency,
+        status: "WAITING_PAYMENT",
       },
     });
+
+    await tx.payment.create({
+      data: {
+        jobId: newJob.id,
+        amount: offer.price,
+        commissionAmount: offer.price * 0.15,
+        currency: offer.currency,
+        method: "TRANSFER",
+        status: "PENDING",
+      },
+    });
+
+    return newJob;
   });
 
-  await sendToUser(offer.providerId, "provider", "Teklifin kabul edildi", `Talebiniz için teklifiniz kabul edildi. İş başlıyor!`, { requestId: offer.requestId, jobId: job.id });
+  await sendToUser(offer.providerId, "provider", "Teklifin kabul edildi", `Talebiniz için teklifiniz kabul edildi. Müşterinin ödemesi bekleniyor!`, { requestId: offer.requestId, jobId: job.id });
 
   res.status(201).json(job);
 });

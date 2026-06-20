@@ -17,6 +17,7 @@ import { chatRouter } from "./routes/chat.routes";
 import { uploadRouter } from "./routes/upload.routes";
 import { pushRouter } from "./routes/push.routes";
 import { customersRouter } from "./routes/customers.routes";
+import { adminRouter } from "./routes/admin.routes";
 import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
@@ -42,6 +43,7 @@ app.use("/api/chat", chatRouter);
 app.use("/api/upload", uploadRouter);
 app.use("/api/push", pushRouter);
 app.use("/api/customers", customersRouter);
+app.use("/api/admin", adminRouter);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.use(errorHandler);

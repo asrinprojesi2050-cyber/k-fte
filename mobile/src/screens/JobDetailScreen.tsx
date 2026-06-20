@@ -8,18 +8,23 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
+  Modal,
 } from "react-native";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import { apiFetch, ApiError } from "../api/client";
 import { createReview } from "../api/jobs";
+import { formatCurrency } from "../utils/currency";
 
 interface JobDetail {
   id: string;
   status: string;
   finalPrice: number;
+  currency: string;
   startedAt: string;
   completedAt: string | null;
   request: {
@@ -45,6 +50,9 @@ export default function JobDetailScreen() {
   const [job, setJob] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [paymentSent, setPaymentSent] = useState(false);
+  const [disputeModalVisible, setDisputeModalVisible] = useState(false);
+  const [disputeReason, setDisputeReason] = useState("");
 
   const isProvider = auth?.role === "provider";
 
@@ -73,12 +81,12 @@ export default function JobDetailScreen() {
     }
   }
 
-  async function handleConfirmPayment() {
+  async function handlePaymentSent() {
     setSubmitting(true);
     try {
-      await apiFetch(`/api/jobs/${jobId}/confirm-payment`, { method: "POST", token: auth?.token });
-      toast.show({ message: "Ödeme onaylandı! İş tamamlandı." });
-      loadJob();
+      await apiFetch(`/api/jobs/${jobId}/payment-sent`, { method: "POST", token: auth?.token });
+      toast.show({ message: "Ödeme bildirimi alındı, yöneticiler kontrol ediyor." });
+      setPaymentSent(true);
     } catch (e: any) {
       toast.show({ message: e instanceof ApiError ? e.message : "Bir şey yanlış gitti.", type: "error" });
     } finally {
@@ -88,6 +96,28 @@ export default function JobDetailScreen() {
 
   function handleReview() {
     (navigation as any).navigate("ReviewForm", { jobId, providerName: job?.provider.name });
+  }
+
+  async function handleDispute() {
+    if (!disputeReason.trim()) {
+      toast.show({ message: "Lütfen bir sebep girin.", type: "error" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await apiFetch(`/api/jobs/${jobId}/dispute`, {
+        method: "POST",
+        token: auth?.token,
+        body: { reason: disputeReason },
+      });
+      toast.show({ message: "Şikayetiniz iletildi." });
+      setDisputeModalVisible(false);
+      loadJob();
+    } catch (e: any) {
+      toast.show({ message: e instanceof ApiError ? e.message : "Hata", type: "error" });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (loading) {
@@ -108,6 +138,7 @@ export default function JobDetailScreen() {
 
   function statusLabel(status: string) {
     switch (status) {
+      case "WAITING_PAYMENT": return "Ödeme Bekleniyor";
       case "IN_PROGRESS": return "Devam Ediyor";
       case "COMPLETED": return "Tamamlandı";
       case "DISPUTED": return "İhtilaflı";
@@ -117,6 +148,7 @@ export default function JobDetailScreen() {
 
   function statusColor(status: string) {
     switch (status) {
+      case "WAITING_PAYMENT": return "#f39c12";
       case "IN_PROGRESS": return colors.primary;
       case "COMPLETED": return colors.success;
       case "DISPUTED": return colors.error;
@@ -125,8 +157,9 @@ export default function JobDetailScreen() {
   }
 
   const canComplete = isProvider && job.status === "IN_PROGRESS";
-  const canConfirmPayment = !isProvider && job.status === "COMPLETED" && !job.payment;
-  const canReview = !isProvider && job.payment?.status === "CONFIRMED" && !job.review;
+  const canSendPayment = !isProvider && job.status === "WAITING_PAYMENT" && !paymentSent;
+  const canReview = !isProvider && job.status === "COMPLETED" && !job.review;
+  const canDispute = job.status === "IN_PROGRESS";
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -137,8 +170,24 @@ export default function JobDetailScreen() {
             <Text style={styles.badgeText}>{statusLabel(job.status)}</Text>
           </View>
         </View>
-        <Text style={styles.amount}>{job.finalPrice} MKD</Text>
+        <Text style={styles.amount}>{formatCurrency(job.finalPrice, job.currency)}</Text>
       </View>
+
+      {job.status === "WAITING_PAYMENT" && (
+        <View style={{ backgroundColor: "#fff3cd", padding: 16, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: "#ffeeba" }}>
+          {!isProvider ? (
+            <Text style={{ color: "#856404", fontSize: 15, fontWeight: "500", lineHeight: 22 }}>
+              Lütfen {formatCurrency(job.finalPrice, job.currency)} tutarını şu IBAN'a gönderin:{"\n"}
+              <Text style={{ fontWeight: "bold" }}>TR99 0000 0000 0000 0000 0000 00</Text>{"\n\n"}
+              Açıklama: <Text style={{ fontWeight: "bold" }}>KOFTE-{job.id.substring(0,6).toUpperCase()}</Text>
+            </Text>
+          ) : (
+            <Text style={{ color: "#856404", fontSize: 15, fontWeight: "500", lineHeight: 22 }}>
+              Müşterinin ödemesi bekleniyor, ödeme platform havuzuna geçince işe başlayabileceksiniz.
+            </Text>
+          )}
+        </View>
+      )}
 
       <Pressable 
         style={styles.infoCard}
@@ -181,9 +230,9 @@ export default function JobDetailScreen() {
         </Pressable>
       )}
 
-      {canConfirmPayment && (
-        <Pressable style={styles.primaryButton} onPress={handleConfirmPayment} disabled={submitting}>
-          {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Ödemeyi Onayla</Text>}
+      {canSendPayment && (
+        <Pressable style={styles.primaryButton} onPress={handlePaymentSent} disabled={submitting}>
+          {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Parayı Gönderdim</Text>}
         </Pressable>
       )}
 
@@ -191,6 +240,13 @@ export default function JobDetailScreen() {
         <Pressable style={styles.secondaryButton} onPress={handleReview}>
           <Ionicons name="star-outline" size={18} color={colors.primary} />
           <Text style={styles.secondaryButtonText}>Değerlendir</Text>
+        </Pressable>
+      )}
+
+      {canDispute && (
+        <Pressable style={[styles.secondaryButton, { borderColor: colors.error, marginTop: 16 }]} onPress={() => setDisputeModalVisible(true)}>
+          <Ionicons name="warning-outline" size={18} color={colors.error} />
+          <Text style={[styles.secondaryButtonText, { color: colors.error }]}>Sorun Bildir (Şikayet Et)</Text>
         </Pressable>
       )}
 
@@ -204,6 +260,31 @@ export default function JobDetailScreen() {
       <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
         <Text style={styles.backButtonText}>Geri Dön</Text>
       </Pressable>
+
+      <Modal visible={disputeModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Sorun Bildir</Text>
+            <Text style={styles.modalSub}>Lütfen yaşadığınız sorunu kısaca anlatın. İşlem askıya alınacak ve yönetici mesajlarınızı inceleyerek karar verecektir.</Text>
+            <TextInput
+              style={styles.modalInput}
+              multiline
+              numberOfLines={4}
+              placeholder="Sorun nedir?..."
+              value={disputeReason}
+              onChangeText={setDisputeReason}
+            />
+            <View style={styles.modalActions}>
+              <Pressable style={styles.modalCancel} onPress={() => setDisputeModalVisible(false)} disabled={submitting}>
+                <Text style={styles.modalCancelText}>Vazgeç</Text>
+              </Pressable>
+              <Pressable style={styles.modalSubmit} onPress={handleDispute} disabled={submitting}>
+                {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalSubmitText}>Gönder</Text>}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -238,4 +319,14 @@ const styles = StyleSheet.create({
   reviewNoteText: { fontSize: 15, color: colors.textSecondary },
   backButton: { alignItems: "center", paddingVertical: spacing.md },
   backButtonText: { fontSize: 15, color: colors.textMuted },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: spacing.xl },
+  modalContent: { backgroundColor: "#fff", borderRadius: borderRadius.xl, padding: spacing.xl },
+  modalTitle: { fontSize: 18, fontWeight: "bold", color: colors.text, marginBottom: spacing.sm },
+  modalSub: { fontSize: 14, color: colors.textSecondary, marginBottom: spacing.lg, lineHeight: 20 },
+  modalInput: { borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, padding: spacing.md, height: 100, textAlignVertical: "top", marginBottom: spacing.lg },
+  modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: spacing.md },
+  modalCancel: { paddingVertical: 10, paddingHorizontal: 16 },
+  modalCancelText: { color: colors.textMuted, fontSize: 15, fontWeight: "600" },
+  modalSubmit: { backgroundColor: colors.error, paddingVertical: 10, paddingHorizontal: 16, borderRadius: borderRadius.md },
+  modalSubmitText: { color: "#fff", fontSize: 15, fontWeight: "600" },
 });

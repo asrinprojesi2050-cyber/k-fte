@@ -10,10 +10,12 @@ const createRequestSchema = z.object({
   categoryId: z.string().uuid(),
   description: z.string().min(5),
   budget: z.number().positive().optional(),
+  currency: z.enum(["EUR", "MKD"]).optional(),
   photoUrls: z.array(z.string()).optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   address: z.string().optional(),
+  targetProviderId: z.string().uuid().optional(),
 });
 
 requestsRouter.post("/", requireAuth, requireRole("customer"), async (req, res) => {
@@ -29,7 +31,21 @@ requestsRouter.post("/", requireAuth, requireRole("customer"), async (req, res) 
       longitude: parsed.data.longitude ?? 21.43,
       customerId: req.auth!.id,
     },
+    include: { customer: true }
   });
+
+  // If a specific provider was targeted, notify them immediately
+  if (parsed.data.targetProviderId) {
+    const { sendToUser } = require("../services/push");
+    sendToUser(
+      parsed.data.targetProviderId, 
+      "provider", 
+      "Sana Özel Yeni İş İsteği!", 
+      `${request.customer.name} sana doğrudan bir iş talebi gönderdi.`, 
+      { requestId: request.id }
+    );
+  }
+
   res.status(201).json(request);
 });
 
@@ -50,20 +66,41 @@ requestsRouter.get("/nearby", requireAuth, requireRole("provider"), async (req, 
   }
 
   const radiusKm = Number(req.query.radiusKm ?? 15);
-  const candidates = await prisma.request.findMany({
-    where: { status: "OPEN", categoryId: provider.categoryId },
-    include: { category: true, customer: { select: { id: true, name: true } } },
-    orderBy: { createdAt: "desc" },
-  });
 
-  const nearby = candidates
-    .filter(
-      (r) => haversineKm(provider.latitude!, provider.longitude!, r.latitude, r.longitude) <= radiusKm
-    )
-    .map((r) => ({
-      ...r,
-      distanceKm: haversineKm(provider.latitude!, provider.longitude!, r.latitude, r.longitude),
-    }));
+  const query = `
+    SELECT * FROM (
+      SELECT r.*,
+        c.id as "c_id", c.slug as "c_slug", c."nameTr" as "c_nameTr", c."nameEn" as "c_nameEn", c."nameMk" as "c_nameMk", c."nameSq" as "c_nameSq",
+        u.id as "u_id", u.name as "u_name",
+        (6371 * acos(
+          cos(radians(${provider.latitude})) * cos(radians(r.latitude)) * 
+          cos(radians(r.longitude) - radians(${provider.longitude})) + 
+          sin(radians(${provider.latitude})) * sin(radians(r.latitude))
+        )) AS "distanceKm"
+      FROM "requests" r
+      LEFT JOIN "categories" c ON r."categoryId" = c.id
+      LEFT JOIN "users" u ON r."customerId" = u.id
+      WHERE r.status = 'OPEN' 
+        AND r."categoryId" = '${provider.categoryId}'
+        AND (r."targetProviderId" IS NULL OR r."targetProviderId" = '${provider.id}')
+    ) as subquery
+    WHERE "distanceKm" <= ${radiusKm}
+    ORDER BY "createdAt" DESC;
+  `;
+
+  const rawRequests: any[] = await prisma.$queryRawUnsafe(query);
+
+  const nearby = rawRequests.map((r) => {
+    const category = r.c_id ? {
+      id: r.c_id, slug: r.c_slug, nameTr: r.c_nameTr, nameEn: r.c_nameEn, nameMk: r.c_nameMk, nameSq: r.c_nameSq
+    } : null;
+    const customer = r.u_id ? { id: r.u_id, name: r.u_name } : null;
+    
+    delete r.c_id; delete r.c_slug; delete r.c_nameTr; delete r.c_nameEn; delete r.c_nameMk; delete r.c_nameSq;
+    delete r.u_id; delete r.u_name;
+
+    return { ...r, category, customer };
+  });
 
   res.json(nearby);
 });

@@ -26,7 +26,7 @@ export const initI18n = async () => {
   }
 
   await i18n.use(initReactI18next).init({
-    compatibilityJSON: "v3", // Required for React Native
+    compatibilityJSON: "v4", // Required for React Native
     resources,
     lng: savedLanguage,
     fallbackLng: "en",

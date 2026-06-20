@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image } from "react-native";
-import { useRoute, RouteProp } from "@react-navigation/native";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, Pressable } from "react-native";
+import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, borderRadius, shadows } from "../../theme";
 import { apiFetch } from "../../api/client";
 import { useTranslation } from "react-i18next";
 import { CustomerRequestsStackParamList } from "../../navigation/types";
+import { useAuth } from "../../context/AuthContext";
 
 interface ProviderData {
   id: string;
@@ -13,9 +14,10 @@ interface ProviderData {
   bio: string | null;
   photoUrl: string | null;
   city: string;
+  categoryId: string;
   ratingAvg: number;
   completedJobsCount: number;
-  category: { nameTr: string; nameEn: string; nameMk: string; nameSq: string };
+  category: { id: string; nameTr: string; nameEn: string; nameMk: string; nameSq: string };
   jobs?: Array<{
     id: string;
     completedAt: string;
@@ -43,6 +45,8 @@ interface ProviderData {
 
 export default function ProviderPublicProfileScreen() {
   const route = useRoute<RouteProp<CustomerRequestsStackParamList, "ProviderPublicProfile">>();
+  const navigation = useNavigation<any>();
+  const { auth } = useAuth();
   const { providerId } = route.params;
   const { t, i18n } = useTranslation();
   const [provider, setProvider] = useState<ProviderData | null>(null);
@@ -160,6 +164,24 @@ export default function ProviderPublicProfileScreen() {
           <Text style={styles.emptyReviewsText}>Henüz tamamlanmış bir işi yok.</Text>
         </View>
       )}
+
+      {auth?.role === "customer" && (
+        <View style={styles.actionContainer}>
+          <Pressable 
+            style={styles.directRequestButton}
+            onPress={() => {
+              navigation.navigate("CreateRequest", {
+                categoryId: provider.category?.id || provider.categoryId, // ensure we have ID
+                targetProviderId: provider.id,
+                targetProviderName: provider.name,
+              });
+            }}
+          >
+            <Ionicons name="flash" size={20} color="#fff" />
+            <Text style={styles.directRequestText}>Bu Ustaya Özel İş İsteği Gönder</Text>
+          </Pressable>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -235,4 +257,24 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
   },
   emptyReviewsText: { marginTop: spacing.sm, color: colors.textMuted, fontSize: 14 },
+
+  actionContainer: {
+    marginTop: spacing.xl,
+    marginBottom: spacing.xl,
+  },
+  directRequestButton: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.full,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    ...shadows.lg,
+  },
+  directRequestText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
 });

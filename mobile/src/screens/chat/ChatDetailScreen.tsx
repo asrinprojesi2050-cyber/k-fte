@@ -85,9 +85,11 @@ export default function ChatDetailScreen() {
     setInput("");
     try {
       const sent = await sendMessage(requestId, text, auth?.token);
-      setMessages((prev) => [...prev, sent]);
-      prevCount.current += 1;
-      
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === sent.id)) return prev;
+        prevCount.current += 1;
+        return [...prev, sent];
+      });
       // We don't need to emit send_message anymore, because chat.routes.ts handles it
       // But we can if we want immediate local broadcast before REST responds.
       // However, we changed backend to emit after DB save, so it's safer to rely on REST response.

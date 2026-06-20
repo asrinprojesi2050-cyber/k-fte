@@ -57,14 +57,18 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 export default function CreateRequestScreen() {
   const { auth } = useAuth();
   const toast = useToast();
-  const route = useRoute<RouteProp<Record<string, { categoryId?: string }>, string>>();
+  const route = useRoute<RouteProp<Record<string, { categoryId?: string, targetProviderId?: string, targetProviderName?: string }>, string>>();
   const preselectedCategoryId = route.params?.categoryId;
+  const targetProviderId = route.params?.targetProviderId;
+  const targetProviderName = route.params?.targetProviderName;
+
   const [step, setStep] = useState(preselectedCategoryId ? 1 : 0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [catsLoading, setCatsLoading] = useState(true);
   const [categoryId, setCategoryId] = useState(preselectedCategoryId ?? "");
   const [description, setDescription] = useState("");
   const [budget, setBudget] = useState("");
+  const [currency, setCurrency] = useState<"EUR" | "MKD">("EUR");
   const [address, setAddress] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -112,9 +116,11 @@ export default function CreateRequestScreen() {
         categoryId,
         description: description.trim(),
         budget: budget ? Number(budget) : undefined,
+        currency,
         address: address.trim() || undefined,
         latitude: location.latitude,
         longitude: location.longitude,
+        targetProviderId,
       };
       const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
       if (photoUrl) body.photoUrls = [`${apiUrl}${photoUrl}`];
@@ -123,7 +129,7 @@ export default function CreateRequestScreen() {
         token: auth?.token,
         body,
       });
-      toast.show({ message: "Talep oluşturuldu! Ustalar teklif verecek." });
+      toast.show({ message: targetProviderId ? "Özel iş isteği gönderildi!" : "Talep oluşturuldu! Ustalar teklif verecek." });
       setStep(0);
       setCategoryId("");
       setDescription("");
@@ -235,6 +241,13 @@ export default function CreateRequestScreen() {
           <Text style={styles.heading}>İş detaylarını anlat</Text>
         </View>
 
+        {targetProviderName && (
+          <View style={styles.directRequestBanner}>
+            <Ionicons name="star" size={18} color="#fff" />
+            <Text style={styles.directRequestBannerText}>Bu talep doğrudan {targetProviderName} ustaya gönderilecek.</Text>
+          </View>
+        )}
+
         <View style={styles.selectedCatBadge}>
           <Ionicons
             name={categoryIcon(selectedCategory?.slug ?? "")}
@@ -270,10 +283,26 @@ export default function CreateRequestScreen() {
         </View>
         <Text style={styles.sectionHint}>Haritayı kaydırarak pini doğru konuma getir.</Text>
 
-        <Text style={styles.label}>Bütçen (MKD, isteğe bağlı)</Text>
+        <View style={styles.budgetHeader}>
+          <Text style={styles.label}>Bütçen (isteğe bağlı)</Text>
+          <View style={styles.currencyToggle}>
+            <Pressable 
+              style={[styles.currencyBtn, currency === "EUR" && styles.currencyBtnActive]}
+              onPress={() => setCurrency("EUR")}
+            >
+              <Text style={[styles.currencyText, currency === "EUR" && styles.currencyTextActive]}>€ EUR</Text>
+            </Pressable>
+            <Pressable 
+              style={[styles.currencyBtn, currency === "MKD" && styles.currencyBtnActive]}
+              onPress={() => setCurrency("MKD")}
+            >
+              <Text style={[styles.currencyText, currency === "MKD" && styles.currencyTextActive]}>MKD</Text>
+            </Pressable>
+          </View>
+        </View>
         <TextInput
           style={styles.input}
-          placeholder="Örn: 2000"
+          placeholder={`Örn: ${currency === "EUR" ? "50" : "3000"}`}
           placeholderTextColor={colors.textMuted}
           keyboardType="number-pad"
           value={budget}
@@ -347,6 +376,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   selectedCatText: { fontSize: 14, fontWeight: "600", color: colors.primary },
+  
+  directRequestBanner: {
+    flexDirection: "row", alignItems: "center", gap: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  directRequestBannerText: { color: "#fff", fontWeight: "600", fontSize: 14, flex: 1 },
 
   sectionHint: { fontSize: 13, color: colors.textSecondary, marginTop: 4, marginBottom: spacing.xl, fontStyle: "italic" },
 
@@ -375,6 +413,13 @@ const styles = StyleSheet.create({
   },
   photoButtonText: { fontSize: 15, fontWeight: "600", color: colors.primaryDark },
   photoPreview: { width: "100%", height: 180, borderRadius: borderRadius.md, marginBottom: spacing.lg, ...shadows.sm },
+
+  budgetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.sm },
+  currencyToggle: { flexDirection: "row", backgroundColor: colors.border, borderRadius: borderRadius.full, padding: 2 },
+  currencyBtn: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: borderRadius.full },
+  currencyBtnActive: { backgroundColor: colors.primary, ...shadows.sm },
+  currencyText: { fontSize: 12, fontWeight: "600", color: colors.textSecondary },
+  currencyTextActive: { color: "#fff" },
 
   label: { fontSize: 15, fontWeight: "600", marginBottom: spacing.sm, color: colors.text },
   input: {

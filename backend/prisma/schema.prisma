@@ -4,6 +4,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // PROD ortamında 10k kullanıcı için PgBouncer kullanılmalıdır.
+  // URL sonuna ?connection_limit=20&pgbouncer=true eklenmelidir.
   url      = env("DATABASE_URL")
 }
 
@@ -29,6 +31,7 @@ enum OfferStatus {
 }
 
 enum JobStatus {
+  WAITING_PAYMENT
   IN_PROGRESS
   COMPLETED
   CANCELLED
@@ -38,12 +41,18 @@ enum JobStatus {
 enum PaymentMethod {
   CASH
   CARD
+  TRANSFER
 }
 
 enum PaymentStatus {
   PENDING
   CONFIRMED
   CANCELLED
+}
+
+enum Currency {
+  EUR
+  MKD
 }
 
 // Musteri hesaplari
@@ -53,6 +62,7 @@ model User {
   name      String
   email     String?
   photoUrl  String?
+  isBanned  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -79,12 +89,14 @@ model Provider {
   verificationStatus VerificationStatus @default(PENDING)
   ratingAvg          Float              @default(0)
   completedJobsCount Int                @default(0)
+  isBanned           Boolean            @default(false)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
-  offers  Offer[]
-  jobs    Job[]
-  reviews Review[]
+  offers   Offer[]
+  jobs     Job[]
+  reviews  Review[]
+  targetedRequests Request[] @relation("TargetProvider")
 
   @@map("providers")
 }
@@ -106,20 +118,23 @@ model Category {
 
 // Musteri talepleri
 model Request {
-  id          String        @id @default(uuid())
-  customerId  String
-  customer    User          @relation(fields: [customerId], references: [id])
-  categoryId  String
-  category    Category      @relation(fields: [categoryId], references: [id])
-  description String
-  budget      Float?
-  photoUrls   String[]
-  latitude    Float
-  longitude   Float
-  address     String?
-  status      RequestStatus @default(OPEN)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id               String        @id @default(uuid())
+  customerId       String
+  customer         User          @relation(fields: [customerId], references: [id])
+  categoryId       String
+  category         Category      @relation(fields: [categoryId], references: [id])
+  targetProviderId String?
+  targetProvider   Provider?     @relation("TargetProvider", fields: [targetProviderId], references: [id])
+  description      String
+  budget           Float?
+  currency         Currency      @default(EUR)
+  photoUrls        String[]
+  latitude         Float
+  longitude        Float
+  address          String?
+  status           RequestStatus @default(OPEN)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   offers   Offer[]
   job      Job?
@@ -136,6 +151,7 @@ model Offer {
   providerId String
   provider   Provider    @relation(fields: [providerId], references: [id])
   price      Float
+  currency   Currency    @default(EUR)
   message    String?
   status     OfferStatus @default(PENDING)
   createdAt  DateTime    @default(now())
@@ -155,10 +171,12 @@ model Job {
   offer       Offer     @relation(fields: [offerId], references: [id])
   providerId  String
   provider    Provider  @relation(fields: [providerId], references: [id])
-  status      JobStatus @default(IN_PROGRESS)
-  finalPrice  Float
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
+  status       JobStatus @default(IN_PROGRESS)
+  finalPrice   Float
+  currency     Currency  @default(EUR)
+  disputeReason String?
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
 
   review  Review?
   payment Payment?
@@ -203,9 +221,11 @@ model Payment {
   job              Job           @relation(fields: [jobId], references: [id])
   amount           Float
   commissionAmount Float
+  currency         Currency      @default(EUR)
   method           PaymentMethod @default(CASH)
   status           PaymentStatus @default(PENDING)
   confirmedAt      DateTime?
+  paidOutAt        DateTime?
   createdAt        DateTime      @default(now())
 
   @@map("payments")
@@ -221,4 +241,16 @@ model PushToken {
 
   @@index([userId, role])
   @@map("push_tokens")
+}
+
+// Sistem yoneticileri (Admin)
+model Admin {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admins")
 }

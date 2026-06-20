@@ -2,16 +2,33 @@ import { Server as HttpServer } from "http";
 import { Server, Socket } from "socket.io";
 import pino from "pino";
 import jwt from "jsonwebtoken";
+import { createAdapter } from "@socket.io/redis-adapter";
+import { createClient } from "redis";
 
 const logger = pino({ transport: { target: "pino-pretty" } });
 
 let ioInstance: Server | null = null;
 
-export const setupSocket = (httpServer: HttpServer) => {
+export const setupSocket = async (httpServer: HttpServer) => {
   const io = new Server(httpServer, {
     cors: { origin: "*" },
   });
   ioInstance = io;
+
+  if (process.env.REDIS_URL) {
+    const pubClient = createClient({ url: process.env.REDIS_URL });
+    const subClient = pubClient.duplicate();
+
+    pubClient.on("error", (err) => logger.error("Redis PubClient Error", err));
+    subClient.on("error", (err) => logger.error("Redis SubClient Error", err));
+
+    await Promise.all([pubClient.connect(), subClient.connect()]);
+    
+    io.adapter(createAdapter(pubClient, subClient));
+    logger.info("Socket.io Redis adapter connected. Scalable mode active!");
+  } else {
+    logger.info("Socket.io running in memory-only mode. Provide REDIS_URL to scale.");
+  }
 
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;

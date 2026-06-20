@@ -2,7 +2,7 @@ import { colors } from "../theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import CustomerHomeScreen from "../screens/customer/CustomerHomeScreen";
+import CustomerHomeStack from "./CustomerHomeStack";
 import CreateRequestScreen from "../screens/customer/CreateRequestScreen";
 import CustomerProfileStack from "./CustomerProfileStack";
 import CustomerRequestsStack from "./CustomerRequestsStack";
@@ -31,7 +31,7 @@ export default function CustomerTabs() {
         tabBarIcon: ({ color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap = "home";
           switch (route.name) {
-            case "CustomerHome":
+            case "CustomerHomeStack":
               iconName = "home-outline";
               break;
             case "CreateRequest":
@@ -51,7 +51,7 @@ export default function CustomerTabs() {
         },
       })}
     >
-      <Tab.Screen name="CustomerHome" component={CustomerHomeScreen} options={{ tabBarLabel: "Ana Sayfa" }} />
+      <Tab.Screen name="CustomerHomeStack" component={CustomerHomeStack} options={{ tabBarLabel: "Ana Sayfa" }} />
       <Tab.Screen name="CreateRequest" component={CreateRequestScreen} options={{ tabBarLabel: "Talep Oluştur" }} />
       <Tab.Screen name="CustomerRequestsStack" component={CustomerRequestsStack} options={{ tabBarLabel: "Taleplerim" }} />
       <Tab.Screen name="MessagesStack" component={MessagesStack} options={{ tabBarLabel: "Mesajlar" }} />

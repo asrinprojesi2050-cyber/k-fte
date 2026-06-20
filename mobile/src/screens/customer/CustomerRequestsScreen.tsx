@@ -10,11 +10,13 @@ import { CustomerRequestsStackParamList } from "../../navigation/types";
 import { cancelRequest } from "../../api/jobs";
 import ErrorRetry from "../../components/ErrorRetry";
 import { SkeletonList } from "../../components/Skeleton";
+import { formatCurrency } from "../../utils/currency";
 
 interface Request {
   id: string;
   description: string;
   budget: number | null;
+  currency: string;
   status: string;
   createdAt: string;
   category: { nameTr: string };
@@ -115,7 +117,7 @@ export default function CustomerRequestsScreen() {
           </View>
           <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
           <View style={styles.cardFooter}>
-            {item.budget ? <Text style={styles.budget}>Bütçe: {item.budget} MKD</Text> : null}
+            {item.budget ? <Text style={styles.budget}>Bütçe: {formatCurrency(item.budget, item.currency)}</Text> : null}
             <Text style={styles.offerCount}>{item.offers.length} teklif</Text>
           </View>
           {item.status === "OPEN" && (

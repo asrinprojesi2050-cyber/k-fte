@@ -10,11 +10,13 @@ import { ProviderJobsStackParamList } from "../../navigation/types";
 import ErrorRetry from "../../components/ErrorRetry";
 import { SkeletonList } from "../../components/Skeleton";
 import { useTranslation } from "react-i18next";
+import { formatCurrency } from "../../utils/currency";
 
 interface Job {
   id: string;
   status: string;
   finalPrice: number;
+  currency: string;
   createdAt: string;
   completedAt: string | null;
   request: { description: string; category: { nameTr: string; nameEn: string; nameMk: string; nameSq: string }; customer: { name: string } };
@@ -57,6 +59,7 @@ export default function ProviderJobsScreen() {
 
   function statusLabel(status: string) {
     switch (status) {
+      case "WAITING_PAYMENT": return "Ödeme Bekleniyor";
       case "IN_PROGRESS": return "Devam Ediyor";
       case "COMPLETED": return "Tamamlandı";
       case "DISPUTED": return "İhtilaflı";
@@ -66,6 +69,7 @@ export default function ProviderJobsScreen() {
 
   function statusColor(status: string) {
     switch (status) {
+      case "WAITING_PAYMENT": return "#f39c12";
       case "IN_PROGRESS": return colors.primary;
       case "COMPLETED": return colors.success;
       case "DISPUTED": return colors.error;
@@ -109,7 +113,7 @@ export default function ProviderJobsScreen() {
           <Text style={styles.description} numberOfLines={2}>{item.request.description}</Text>
           <View style={styles.cardFooter}>
             <Text style={styles.customer}>{item.request.customer.name}</Text>
-            <Text style={styles.amount}>{item.finalPrice} MKD</Text>
+            <Text style={styles.amount}>{formatCurrency(item.finalPrice, item.currency)}</Text>
           </View>
         </Pressable>
       )}

@@ -16,10 +16,12 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { apiFetch, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
+import { formatCurrency } from "../utils/currency";
 
 interface OfferWithProvider {
   id: string;
   price: number;
+  currency: string;
   message: string | null;
   status: string;
   provider: { id: string; name: string; ratingAvg: number };
@@ -30,6 +32,7 @@ interface RequestDetail {
   id: string;
   description: string;
   budget: number | null;
+  currency: string;
   status: string;
   createdAt: string;
   category: { nameTr: string };
@@ -202,7 +205,7 @@ export default function RequestDetailScreen() {
         {request.budget && (
           <View style={styles.budgetWrap}>
             <Ionicons name="wallet-outline" size={18} color={colors.success} />
-            <Text style={styles.budget}>{request.budget} MKD</Text>
+            <Text style={styles.budget}>{formatCurrency(request.budget, request.currency)}</Text>
           </View>
         )}
       </View>
@@ -218,7 +221,7 @@ export default function RequestDetailScreen() {
       {isProvider && request.status === "OPEN" ? (
         <View style={styles.offerForm}>
           <Text style={styles.sectionTitle}>Teklif Ver</Text>
-          <Text style={styles.label}>Fiyat (MKD) *</Text>
+          <Text style={styles.label}>Fiyat ({request.currency === "EUR" ? "€" : "MKD"}) *</Text>
           <TextInput
             style={styles.input}
             placeholder="Örn: 2500"
@@ -278,7 +281,7 @@ export default function RequestDetailScreen() {
                       <Text style={styles.offerRating}>{offer.provider.ratingAvg.toFixed(1)}</Text>
                     </View>
                   </View>
-                  <Text style={styles.offerPrice}>{offer.price} MKD</Text>
+                  <Text style={styles.offerPrice}>{formatCurrency(offer.price, offer.currency)}</Text>
                 </Pressable>
                 
                 {offer.message && (

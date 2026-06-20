@@ -10,11 +10,13 @@ import { useAuth } from "../../context/AuthContext";
 import { ProviderHomeStackParamList } from "../../navigation/types";
 import ErrorRetry from "../../components/ErrorRetry";
 import { SkeletonList } from "../../components/Skeleton";
+import { formatCurrency } from "../../utils/currency";
 
 interface NearbyRequest {
   id: string;
   description: string;
   budget: number | null;
+  currency: string;
   distanceKm: number | null;
   createdAt: string;
   customer: { name: string };
@@ -172,7 +174,7 @@ export default function ProviderHomeScreen() {
             </View>
             {item.budget ? (
               <View style={styles.budgetWrap}>
-                <Text style={styles.budget}>{item.budget} MKD</Text>
+                <Text style={styles.budget}>{formatCurrency(item.budget, item.currency)}</Text>
               </View>
             ) : null}
           </View>

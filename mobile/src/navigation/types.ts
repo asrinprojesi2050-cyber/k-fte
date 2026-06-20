@@ -7,11 +7,17 @@ export type AuthStackParamList = {
 };
 
 export type CustomerTabParamList = {
-  CustomerHome: undefined;
-  CreateRequest: { categoryId?: string } | undefined;
+  CustomerHomeStack: undefined;
+  CreateRequest: { categoryId?: string, targetProviderId?: string, targetProviderName?: string } | undefined;
   CustomerRequestsStack: undefined;
   MessagesStack: undefined;
   CustomerProfileStack: undefined;
+};
+
+export type CustomerHomeStackParamList = {
+  CustomerHome: undefined;
+  ProviderDirectory: undefined;
+  ProviderPublicProfile: { providerId: string };
 };
 
 export type CustomerRequestsStackParamList = {
