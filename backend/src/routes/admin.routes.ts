@@ -56,19 +56,86 @@ adminRouter.use(requireAuth, requireAdmin);
 adminRouter.get("/stats", async (req, res) => {
   const usersCount = await prisma.user.count();
   const providersCount = await prisma.provider.count();
+  
+  // Total requests to calculate match rate
+  const totalRequestsCount = await prisma.request.count();
   const activeRequestsCount = await prisma.request.count({ where: { status: "OPEN" } });
   
-  const jobs = await prisma.job.findMany({ where: { status: "COMPLETED" }, select: { finalPrice: true, currency: true } });
-  const volumeEur = jobs.filter(j => j.currency === "EUR").reduce((sum, j) => sum + j.finalPrice, 0);
-  const volumeMkd = jobs.filter(j => j.currency === "MKD").reduce((sum, j) => sum + j.finalPrice, 0);
+  // Get all completed jobs to calculate volumes
+  const completedJobs = await prisma.job.findMany({ 
+    where: { status: "COMPLETED" }, 
+    select: { finalPrice: true, currency: true, completedAt: true } 
+  });
+  
+  const volumeEur = completedJobs.filter(j => j.currency === "EUR").reduce((sum, j) => sum + j.finalPrice, 0);
+  const volumeMkd = completedJobs.filter(j => j.currency === "MKD").reduce((sum, j) => sum + j.finalPrice, 0);
+  const completedJobsCount = completedJobs.length;
+
+  // KPIs
+  const netProfitEur = volumeEur * 0.10; // 10% commission
+  const matchRate = totalRequestsCount > 0 ? Math.round((completedJobsCount / totalRequestsCount) * 100) : 0;
+
+  // Escrow Balance (Matched jobs)
+  const matchedRequests = await prisma.request.findMany({
+    where: { status: "MATCHED" },
+    select: { budget: true, currency: true }
+  });
+  const escrowBalanceEur = matchedRequests.filter(r => r.currency === "EUR" && r.budget).reduce((sum, r) => sum + (r.budget as number), 0);
+
+  // Category Distribution
+  const categoryStats = await prisma.request.groupBy({
+    by: ['categoryId'],
+    _count: { id: true },
+  });
+  const categories = await prisma.category.findMany({ select: { id: true, nameTr: true }});
+  
+  const categoryDistribution = categoryStats.map(stat => {
+    const cat = categories.find(c => c.id === stat.categoryId);
+    return {
+      name: cat ? cat.nameTr : "Diğer",
+      value: stat._count.id
+    };
+  }).sort((a, b) => b.value - a.value);
+
+  // Monthly Volume (Last 6 Months logic based on JS aggregation since data is small)
+  const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+  const monthlyVolumeMap: Record<string, number> = {};
+  
+  completedJobs.forEach(job => {
+    if (!job.completedAt || job.currency !== "EUR") return;
+    const date = new Date(job.completedAt);
+    const key = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+    monthlyVolumeMap[key] = (monthlyVolumeMap[key] || 0) + job.finalPrice;
+  });
+
+  const monthlyVolume = Object.entries(monthlyVolumeMap).map(([month, volume]) => ({ month, volume }));
+
+  // Top 5 Providers
+  const topProviders = await prisma.provider.findMany({
+    orderBy: { completedJobsCount: "desc" },
+    take: 5,
+    select: {
+      id: true,
+      name: true,
+      completedJobsCount: true,
+      ratingAvg: true,
+      category: { select: { nameTr: true } }
+    }
+  });
 
   res.json({
     usersCount,
     providersCount,
     activeRequestsCount,
-    completedJobsCount: jobs.length,
+    completedJobsCount,
     volumeEur,
     volumeMkd,
+    netProfitEur,
+    escrowBalanceEur,
+    matchRate,
+    categoryDistribution,
+    monthlyVolume,
+    topProviders
   });
 });
 

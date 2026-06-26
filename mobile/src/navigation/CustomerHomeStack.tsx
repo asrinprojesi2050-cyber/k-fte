@@ -15,6 +15,7 @@ export default function CustomerHomeStack() {
         headerTintColor: colors.text,
         headerTitleStyle: { fontWeight: "600" },
         headerShadowVisible: false,
+        animation: "slide_from_right",
       }}
     >
       <Stack.Screen 

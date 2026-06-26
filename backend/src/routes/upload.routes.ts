@@ -1,37 +1,38 @@
 import { Router } from "express";
 import multer from "multer";
-import path from "path";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../utils/cloudinary";
 import { requireAuth } from "../middleware/auth";
+import { uploadFile } from "../services/storage";
 
 export const uploadRouter = Router();
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: async (req, file) => {
-    const ext = path.extname(file.originalname).replace(".", "");
-    const allowedFormats = ["jpg", "jpeg", "png", "webp", "pdf"];
-    
-    return {
-      folder: "kofte",
-      format: allowedFormats.includes(ext.toLowerCase()) ? ext.toLowerCase() : "png",
-      public_id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    };
-  },
-});
+// Use memory storage so we can handle it via the storage service (S3/Local fallback)
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
 });
 
-uploadRouter.post("/photo", requireAuth, upload.single("file"), (req, res) => {
+uploadRouter.post("/photo", requireAuth, upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-  res.json({ url: req.file.path });
+  try {
+    const url = await uploadFile(req.file.buffer, req.file.originalname, req.file.mimetype);
+    const fullUrl = url.startsWith("/uploads") ? `${req.protocol}://${req.get("host")}${url}` : url;
+    res.json({ url: fullUrl });
+  } catch (error) {
+    console.error("Upload error:", error);
+    res.status(500).json({ error: "Upload failed" });
+  }
 });
 
-uploadRouter.post("/document", requireAuth, upload.single("file"), (req, res) => {
+uploadRouter.post("/document", requireAuth, upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-  res.json({ url: req.file.path });
+  try {
+    const url = await uploadFile(req.file.buffer, req.file.originalname, req.file.mimetype);
+    const fullUrl = url.startsWith("/uploads") ? `${req.protocol}://${req.get("host")}${url}` : url;
+    res.json({ url: fullUrl });
+  } catch (error) {
+    console.error("Upload error:", error);
+    res.status(500).json({ error: "Upload failed" });
+  }
 });

@@ -57,14 +57,15 @@ enum Currency {
 
 // Musteri hesaplari
 model User {
-  id        String   @id @default(uuid())
-  phone     String   @unique
-  name      String
-  email     String?
-  photoUrl  String?
-  isBanned  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(uuid())
+  phone            String   @unique
+  name             String
+  email            String?
+  photoUrl         String?
+  isBanned         Boolean  @default(false)
+  cancellationCount Int     @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   requests Request[]
   reviews  Review[]
@@ -90,6 +91,7 @@ model Provider {
   ratingAvg          Float              @default(0)
   completedJobsCount Int                @default(0)
   isBanned           Boolean            @default(false)
+  cancellationCount  Int                @default(0)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -132,6 +134,7 @@ model Request {
   latitude         Float
   longitude        Float
   address          String?
+  scheduledAt      DateTime?
   status           RequestStatus @default(OPEN)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
@@ -153,6 +156,7 @@ model Offer {
   price      Float
   currency   Currency    @default(EUR)
   message    String?
+  isDiscovery Boolean    @default(false)
   status     OfferStatus @default(PENDING)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
@@ -172,6 +176,7 @@ model Job {
   providerId  String
   provider    Provider  @relation(fields: [providerId], references: [id])
   status       JobStatus @default(IN_PROGRESS)
+  milestone    String?
   finalPrice   Float
   currency     Currency  @default(EUR)
   disputeReason String?
@@ -180,8 +185,23 @@ model Job {
 
   review  Review?
   payment Payment?
+  additionalCosts AdditionalCost[]
 
   @@map("jobs")
+}
+
+// Ekstra Masraflar
+model AdditionalCost {
+  id          String      @id @default(uuid())
+  jobId       String
+  job         Job         @relation(fields: [jobId], references: [id])
+  amount      Float
+  description String
+  status      OfferStatus @default(PENDING) // PENDING, ACCEPTED, REJECTED
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("additional_costs")
 }
 
 // Yorumlar ve puanlar

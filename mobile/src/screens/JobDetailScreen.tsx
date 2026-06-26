@@ -20,9 +20,17 @@ import { apiFetch, ApiError } from "../api/client";
 import { createReview } from "../api/jobs";
 import { formatCurrency } from "../utils/currency";
 
+interface AdditionalCost {
+  id: string;
+  amount: number;
+  description: string;
+  status: string;
+}
+
 interface JobDetail {
   id: string;
   status: string;
+  milestone: string | null;
   finalPrice: number;
   currency: string;
   startedAt: string;
@@ -33,11 +41,13 @@ interface JobDetail {
     category: { nameTr: string };
     customerId: string;
     customer: { name: string; phone: string };
+    scheduledAt: string | null;
   };
   provider: { id: string; name: string; phone: string; ratingAvg: number };
-  offer: { price: number; message: string | null };
+  offer: { price: number; message: string | null; isDiscovery: boolean };
   payment: { status: string } | null;
   review: { id: string; rating: number } | null;
+  additionalCosts: AdditionalCost[];
 }
 
 export default function JobDetailScreen() {
@@ -51,8 +61,13 @@ export default function JobDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [paymentSent, setPaymentSent] = useState(false);
+  
   const [disputeModalVisible, setDisputeModalVisible] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
+
+  const [costModalVisible, setCostModalVisible] = useState(false);
+  const [costAmount, setCostAmount] = useState("");
+  const [costDesc, setCostDesc] = useState("");
 
   const isProvider = auth?.role === "provider";
 
@@ -66,6 +81,93 @@ export default function JobDetailScreen() {
       .then(setJob)
       .catch(() => toast.show({ message: "İş detayı yüklenemedi", type: "error" }))
       .finally(() => setLoading(false));
+  }
+
+  async function handleMilestone(milestone: string) {
+    setSubmitting(true);
+    try {
+      await apiFetch(`/api/jobs/${jobId}/milestone`, { method: "POST", token: auth?.token, body: { milestone } });
+      toast.show({ message: "Durum güncellendi." });
+      loadJob();
+    } catch (e: any) {
+      toast.show({ message: e instanceof ApiError ? e.message : "Hata", type: "error" });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleCancel() {
+    if (typeof window !== "undefined" && window.confirm) {
+      if (!window.confirm("Bu işi iptal etmek istediğine emin misin? (Son 2 saat içindeyse ceza uygulanabilir)")) return;
+    } else {
+      Alert.alert("İptal Et", "Bu işi iptal etmek istediğine emin misin? (Son 2 saat içindeyse ceza uygulanabilir)", [
+        { text: "Vazgeç", style: "cancel" },
+        { text: "İptal Et", style: "destructive", onPress: executeCancel },
+      ]);
+      return;
+    }
+    executeCancel();
+  }
+
+  async function executeCancel() {
+    setSubmitting(true);
+    try {
+      const res = await apiFetch<any>(`/api/jobs/${jobId}/cancel`, { method: "POST", token: auth?.token });
+      if (res.penaltyApplied) {
+        toast.show({ message: "İş iptal edildi. Geç iptal sebebiyle ceza puanı aldınız.", type: "error" });
+      } else {
+        toast.show({ message: "İş iptal edildi." });
+      }
+      loadJob();
+    } catch (e: any) {
+      toast.show({ message: e instanceof ApiError ? e.message : "Hata", type: "error" });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRequestCost() {
+    if (!costAmount || !costDesc) return Alert.alert("Hata", "Lütfen tutar ve açıklama girin.");
+    setSubmitting(true);
+    try {
+      await apiFetch(`/api/additional-costs`, {
+        method: "POST", token: auth?.token,
+        body: { jobId, amount: Number(costAmount), description: costDesc }
+      });
+      toast.show({ message: "Ek masraf talebi gönderildi." });
+      setCostModalVisible(false);
+      loadJob();
+    } catch (e: any) {
+      toast.show({ message: e instanceof ApiError ? e.message : "Hata", type: "error" });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleApproveCost(costId: string) {
+    setSubmitting(true);
+    try {
+      await apiFetch(`/api/additional-costs/${costId}/approve`, { method: "POST", token: auth?.token });
+      toast.show({ message: "Ek masraf onaylandı." });
+      loadJob();
+    } catch (e: any) {
+      toast.show({ message: e instanceof ApiError ? e.message : "Hata", type: "error" });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRejectCost(costId: string) {
+    setSubmitting(true);
+    try {
+      await apiFetch(`/api/additional-costs/${costId}/reject`, { method: "POST", token: auth?.token });
+      toast.show({ message: "Ek masraf reddedildi." });
+      loadJob();
+    } catch (e: any) {
+      toast.show({ message: e instanceof ApiError ? e.message : "Hata", type: "error" });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handleComplete() {
@@ -173,6 +275,23 @@ export default function JobDetailScreen() {
         <Text style={styles.amount}>{formatCurrency(job.finalPrice, job.currency)}</Text>
       </View>
 
+      {job.request.scheduledAt && (
+        <View style={{ backgroundColor: colors.infoLight, padding: 12, borderRadius: 8, marginBottom: 16 }}>
+          <Text style={{ color: colors.info, fontSize: 14, fontWeight: "600" }}>
+            📅 Randevu: {new Date(job.request.scheduledAt).toLocaleString("tr-TR")}
+          </Text>
+        </View>
+      )}
+
+      {job.milestone && (
+        <View style={{ backgroundColor: colors.primaryLight, padding: 12, borderRadius: 8, marginBottom: 16, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Ionicons name="flag-outline" size={20} color={colors.primary} />
+          <Text style={{ color: colors.primaryDark, fontSize: 15, fontWeight: "bold" }}>
+            Anlık Durum: {job.milestone}
+          </Text>
+        </View>
+      )}
+
       {job.status === "WAITING_PAYMENT" && (
         <View style={{ backgroundColor: "#fff3cd", padding: 16, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: "#ffeeba" }}>
           {!isProvider ? (
@@ -214,6 +333,37 @@ export default function JobDetailScreen() {
         <View style={styles.messageBox}>
           <Text style={styles.messageLabel}>Ustanın notu:</Text>
           <Text style={styles.messageText}>{job.offer.message}</Text>
+          {job.offer.isDiscovery && (
+            <Text style={{ color: colors.primary, fontWeight: "bold", marginTop: 8 }}>🔍 Bu bir ücretsiz keşif teklifidir.</Text>
+          )}
+        </View>
+      )}
+
+      {job.additionalCosts?.length > 0 && (
+        <View style={{ marginBottom: spacing.xl }}>
+          <Text style={styles.sectionTitle}>Ekstra Masraflar</Text>
+          {job.additionalCosts.map(cost => (
+            <View key={cost.id} style={{ backgroundColor: colors.card, padding: 12, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: colors.border }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+                <Text style={{ fontWeight: "bold", fontSize: 16 }}>{cost.description}</Text>
+                <Text style={{ fontWeight: "bold", color: colors.primary }}>{formatCurrency(cost.amount, job.currency)}</Text>
+              </View>
+              <Text style={{ color: cost.status === "ACCEPTED" ? colors.success : cost.status === "REJECTED" ? colors.error : colors.warning, fontWeight: "bold", marginBottom: 8 }}>
+                Durum: {cost.status === "ACCEPTED" ? "Onaylandı" : cost.status === "REJECTED" ? "Reddedildi" : "Onay Bekliyor"}
+              </Text>
+              
+              {!isProvider && cost.status === "PENDING" && (
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <Pressable style={{ flex: 1, backgroundColor: colors.success, padding: 8, borderRadius: 4, alignItems: "center" }} onPress={() => handleApproveCost(cost.id)}>
+                    <Text style={{ color: "#fff", fontWeight: "bold" }}>Onayla</Text>
+                  </Pressable>
+                  <Pressable style={{ flex: 1, borderWidth: 1, borderColor: colors.error, padding: 8, borderRadius: 4, alignItems: "center" }} onPress={() => handleRejectCost(cost.id)}>
+                    <Text style={{ color: colors.error, fontWeight: "bold" }}>Reddet</Text>
+                  </Pressable>
+                </View>
+              )}
+            </View>
+          ))}
         </View>
       )}
 
@@ -223,6 +373,23 @@ export default function JobDetailScreen() {
       <Text style={styles.description}>{job.request.description}</Text>
 
       <View style={styles.divider} />
+
+      {isProvider && job.status === "IN_PROGRESS" && (
+        <View style={{ marginBottom: spacing.xl }}>
+          <Text style={styles.sectionTitle}>Durum Güncelle</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+            {["Yola Çıktım", "İşe Başladım", "Malzeme Bekleniyor"].map(m => (
+              <Pressable key={m} style={{ backgroundColor: colors.border, padding: 10, borderRadius: 8 }} onPress={() => handleMilestone(m)}>
+                <Text style={{ color: colors.textSecondary, fontWeight: "600" }}>{m}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable style={styles.secondaryButton} onPress={() => setCostModalVisible(true)}>
+            <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+            <Text style={styles.secondaryButtonText}>Ekstra Masraf Talep Et</Text>
+          </Pressable>
+        </View>
+      )}
 
       {canComplete && (
         <Pressable style={styles.primaryButton} onPress={handleComplete} disabled={submitting}>
@@ -240,6 +407,13 @@ export default function JobDetailScreen() {
         <Pressable style={styles.secondaryButton} onPress={handleReview}>
           <Ionicons name="star-outline" size={18} color={colors.primary} />
           <Text style={styles.secondaryButtonText}>Değerlendir</Text>
+        </Pressable>
+      )}
+
+      {job.status !== "COMPLETED" && job.status !== "CANCELLED" && (
+        <Pressable style={[styles.secondaryButton, { borderColor: colors.error, marginTop: 16 }]} onPress={handleCancel}>
+          <Ionicons name="close-circle-outline" size={18} color={colors.error} />
+          <Text style={[styles.secondaryButtonText, { color: colors.error }]}>İşi İptal Et</Text>
         </Pressable>
       )}
 
@@ -280,6 +454,42 @@ export default function JobDetailScreen() {
               </Pressable>
               <Pressable style={styles.modalSubmit} onPress={handleDispute} disabled={submitting}>
                 {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalSubmitText}>Gönder</Text>}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={costModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Ekstra Masraf Talep Et</Text>
+            <Text style={styles.modalSub}>Beklenmeyen bir durum mu oldu? Müşteriden ekstra masraf onaylamasını isteyin.</Text>
+            
+            <Text style={{ fontWeight: "bold", marginBottom: 4 }}>Tutar ({job.currency})</Text>
+            <TextInput
+              style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, marginBottom: 12 }}
+              keyboardType="number-pad"
+              placeholder="Örn: 500"
+              value={costAmount}
+              onChangeText={setCostAmount}
+            />
+
+            <Text style={{ fontWeight: "bold", marginBottom: 4 }}>Açıklama</Text>
+            <TextInput
+              style={styles.modalInput}
+              multiline
+              numberOfLines={3}
+              placeholder="Neden ekstra masraf gerekiyor?"
+              value={costDesc}
+              onChangeText={setCostDesc}
+            />
+            <View style={styles.modalActions}>
+              <Pressable style={styles.modalCancel} onPress={() => setCostModalVisible(false)} disabled={submitting}>
+                <Text style={styles.modalCancelText}>Vazgeç</Text>
+              </Pressable>
+              <Pressable style={[styles.modalSubmit, { backgroundColor: colors.primary }]} onPress={handleRequestCost} disabled={submitting}>
+                {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalSubmitText}>Talep Et</Text>}
               </Pressable>
             </View>
           </View>

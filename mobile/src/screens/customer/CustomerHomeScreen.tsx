@@ -155,10 +155,10 @@ const styles = StyleSheet.create({
 
   providerCard: {
     backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
     alignItems: "center",
-    width: 120,
+    width: 140,
     ...shadows.sm,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.03)",

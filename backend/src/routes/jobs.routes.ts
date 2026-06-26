@@ -108,3 +108,68 @@ jobsRouter.post("/:id/payment-sent", requireAuth, async (req, res) => {
 
   res.json({ ok: true, message: "Ödeme beyanı alındı, yönetici onaylayacak." });
 });
+
+// Usta iş durumu için kilometre taşı ekler (Örn: Yola Çıktı, Malzeme Alınıyor)
+jobsRouter.post("/:id/milestone", requireAuth, async (req, res) => {
+  const { milestone } = req.body;
+  if (!milestone || typeof milestone !== "string") {
+    return res.status(400).json({ error: "Milestone required" });
+  }
+
+  const job = await prisma.job.findUnique({ where: { id: req.params.id }, include: { request: true } });
+  if (!job || job.providerId !== req.auth!.id) {
+    return res.status(404).json({ error: "Not found" });
+  }
+
+  const updated = await prisma.job.update({
+    where: { id: job.id },
+    data: { milestone },
+  });
+
+  await sendToUser(job.request.customerId, "customer", "İş Durumu Güncellendi", `Usta iş durumunu değiştirdi: ${milestone}`, { jobId: job.id });
+
+  res.json(updated);
+});
+
+// İptal ve Ceza Mantığı
+jobsRouter.post("/:id/cancel", requireAuth, async (req, res) => {
+  const job = await prisma.job.findUnique({ where: { id: req.params.id }, include: { request: true } });
+  if (!job) return res.status(404).json({ error: "Not found" });
+  
+  const isCustomer = job.request.customerId === req.auth!.id;
+  const isProvider = job.providerId === req.auth!.id;
+  
+  if (!isCustomer && !isProvider) return res.status(403).json({ error: "Forbidden" });
+  if (job.status === "COMPLETED" || job.status === "CANCELLED") {
+    return res.status(400).json({ error: "Job already closed" });
+  }
+
+  // Ceza Mantığı (Son 2 saat kala iptal edilirse)
+  let penaltyApplied = false;
+  if (job.request.scheduledAt) {
+    const hoursLeft = (new Date(job.request.scheduledAt).getTime() - new Date().getTime()) / (1000 * 60 * 60);
+    if (hoursLeft > 0 && hoursLeft <= 2) {
+      penaltyApplied = true;
+      if (isCustomer) {
+        await prisma.user.update({ where: { id: req.auth!.id }, data: { cancellationCount: { increment: 1 } } });
+      } else {
+        await prisma.provider.update({ where: { id: req.auth!.id }, data: { cancellationCount: { increment: 1 } } });
+      }
+    }
+  }
+
+  const updated = await prisma.job.update({
+    where: { id: job.id },
+    data: { status: "CANCELLED" },
+  });
+
+  const targetId = isCustomer ? job.providerId : job.request.customerId;
+  const targetRole = isCustomer ? "provider" : "customer";
+  
+  let msg = "Karşı taraf işi iptal etti.";
+  if (penaltyApplied) msg += " (Geç iptal sebebiyle karşı tarafa ceza puanı uygulandı.)";
+
+  await sendToUser(targetId, targetRole, "İş İptal Edildi", msg, { jobId: job.id });
+
+  res.json({ updated, penaltyApplied });
+});

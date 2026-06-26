@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
-import { User } from 'lucide-react';
+import { User, UserCircle } from 'lucide-react';
 
 export default function Users() {
   const [users, setUsers] = useState<any[]>([]);

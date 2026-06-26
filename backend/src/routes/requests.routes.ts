@@ -16,6 +16,7 @@ const createRequestSchema = z.object({
   longitude: z.number().optional(),
   address: z.string().optional(),
   targetProviderId: z.string().uuid().optional(),
+  scheduledAt: z.string().datetime().optional(),
 });
 
 requestsRouter.post("/", requireAuth, requireRole("customer"), async (req, res) => {

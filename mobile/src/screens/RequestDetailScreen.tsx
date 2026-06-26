@@ -53,6 +53,7 @@ export default function RequestDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [offerPrice, setOfferPrice] = useState("");
   const [offerMessage, setOfferMessage] = useState("");
+  const [isDiscovery, setIsDiscovery] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const isProvider = auth?.role === "provider";
@@ -81,15 +82,20 @@ export default function RequestDetailScreen() {
   }
 
   async function handleMakeOffer() {
-    if (!offerPrice || isNaN(Number(offerPrice))) {
-      return Alert.alert("Hata", "Lütfen geçerli bir fiyat gir.");
+    if (!isDiscovery && (!offerPrice || isNaN(Number(offerPrice)))) {
+      return Alert.alert("Hata", "Lütfen geçerli bir fiyat gir veya Ücretsiz Keşif seç.");
     }
     setSubmitting(true);
     try {
       await apiFetch("/api/offers", {
         method: "POST",
         token: auth?.token,
-        body: { requestId, price: Number(offerPrice), message: offerMessage.trim() || undefined },
+        body: { 
+          requestId, 
+          price: isDiscovery ? 0 : Number(offerPrice), 
+          message: offerMessage.trim() || undefined,
+          isDiscovery 
+        },
       });
       toast.show({ message: "Teklifin gönderildi!" });
       navigation.goBack();
@@ -221,15 +227,26 @@ export default function RequestDetailScreen() {
       {isProvider && request.status === "OPEN" ? (
         <View style={styles.offerForm}>
           <Text style={styles.sectionTitle}>Teklif Ver</Text>
-          <Text style={styles.label}>Fiyat ({request.currency === "EUR" ? "€" : "MKD"}) *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Örn: 2500"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
-            value={offerPrice}
-            onChangeText={setOfferPrice}
-          />
+          
+          <Pressable style={styles.discoveryToggle} onPress={() => setIsDiscovery(!isDiscovery)}>
+            <Ionicons name={isDiscovery ? "checkbox" : "square-outline"} size={24} color={colors.primary} />
+            <Text style={styles.discoveryText}>Sadece Ücretsiz Keşif Yapmak İstiyorum</Text>
+          </Pressable>
+
+          {!isDiscovery && (
+            <>
+              <Text style={styles.label}>Fiyat ({request.currency === "EUR" ? "€" : "MKD"}) *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Örn: 2500"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="number-pad"
+                value={offerPrice}
+                onChangeText={setOfferPrice}
+              />
+            </>
+          )}
+
           <Text style={styles.label}>Mesaj (İsteğe bağlı)</Text>
           <TextInput
             style={styles.textArea}
@@ -348,6 +365,8 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 20, fontWeight: "bold", color: colors.text, marginBottom: spacing.lg, letterSpacing: -0.5 },
   
   offerForm: { marginBottom: spacing.xl },
+  discoveryToggle: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.lg, backgroundColor: colors.primaryLight, padding: spacing.md, borderRadius: borderRadius.md },
+  discoveryText: { fontSize: 15, fontWeight: "600", color: colors.primaryDark },
   label: { fontSize: 15, fontWeight: "600", color: colors.text, marginBottom: spacing.sm },
   input: { backgroundColor: colors.card, borderRadius: borderRadius.lg, padding: 16, fontSize: 16, color: colors.text, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.lg, ...shadows.sm },
   textArea: { backgroundColor: colors.card, borderRadius: borderRadius.lg, padding: 16, fontSize: 16, color: colors.text, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.lg, minHeight: 100, textAlignVertical: "top", ...shadows.sm },

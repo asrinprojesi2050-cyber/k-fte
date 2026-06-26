@@ -18,8 +18,8 @@ export default function RootNavigator() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#ffffff" }}>
+        <ActivityIndicator size="large" color="#4F46E5" />
       </View>
     );
   }
@@ -30,7 +30,7 @@ export default function RootNavigator() {
         {auth ? (
           auth.role === "customer" ? <CustomerTabs /> : <ProviderTabs />
         ) : (
-          <AuthStack.Navigator>
+          <AuthStack.Navigator screenOptions={{ animation: "fade_from_bottom", headerShadowVisible: false }}>
             <AuthStack.Screen name="RoleSelect" component={RoleSelectScreen} options={{ headerShown: false }} />
             <AuthStack.Screen name="Phone" component={PhoneScreen} options={{ title: "" }} />
             <AuthStack.Screen name="Otp" component={OtpScreen} options={{ title: "" }} />

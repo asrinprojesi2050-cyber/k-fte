@@ -70,6 +70,7 @@ export default function CreateRequestScreen() {
   const [budget, setBudget] = useState("");
   const [currency, setCurrency] = useState<"EUR" | "MKD">("EUR");
   const [address, setAddress] = useState("");
+  const [scheduleOption, setScheduleOption] = useState<"ASAP" | "TOMORROW" | "WEEKEND">("ASAP");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -112,6 +113,15 @@ export default function CreateRequestScreen() {
     if (!description.trim()) return Alert.alert("Hata", "Lütfen iş detayını açıkla.");
     setSubmitting(true);
     try {
+      let scheduledAtDate = new Date();
+      if (scheduleOption === "TOMORROW") {
+        scheduledAtDate.setDate(scheduledAtDate.getDate() + 1);
+      } else if (scheduleOption === "WEEKEND") {
+        const day = scheduledAtDate.getDay();
+        const daysToWeekend = day === 6 ? 0 : day === 0 ? 6 : 6 - day;
+        scheduledAtDate.setDate(scheduledAtDate.getDate() + daysToWeekend);
+      }
+
       const body: Record<string, any> = {
         categoryId,
         description: description.trim(),
@@ -121,6 +131,7 @@ export default function CreateRequestScreen() {
         latitude: location.latitude,
         longitude: location.longitude,
         targetProviderId,
+        scheduledAt: scheduledAtDate.toISOString(),
       };
       const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
       if (photoUrl) body.photoUrls = [`${apiUrl}${photoUrl}`];
@@ -318,6 +329,28 @@ export default function CreateRequestScreen() {
           onChangeText={setAddress}
         />
 
+        <Text style={styles.label}>Ne Zaman?</Text>
+        <View style={styles.scheduleOptions}>
+          <Pressable 
+            style={[styles.scheduleBtn, scheduleOption === "ASAP" && styles.scheduleBtnActive]}
+            onPress={() => setScheduleOption("ASAP")}
+          >
+            <Text style={[styles.scheduleText, scheduleOption === "ASAP" && styles.scheduleTextActive]}>Hemen</Text>
+          </Pressable>
+          <Pressable 
+            style={[styles.scheduleBtn, scheduleOption === "TOMORROW" && styles.scheduleBtnActive]}
+            onPress={() => setScheduleOption("TOMORROW")}
+          >
+            <Text style={[styles.scheduleText, scheduleOption === "TOMORROW" && styles.scheduleTextActive]}>Yarın</Text>
+          </Pressable>
+          <Pressable 
+            style={[styles.scheduleBtn, scheduleOption === "WEEKEND" && styles.scheduleBtnActive]}
+            onPress={() => setScheduleOption("WEEKEND")}
+          >
+            <Text style={[styles.scheduleText, scheduleOption === "WEEKEND" && styles.scheduleTextActive]}>Hafta Sonu</Text>
+          </Pressable>
+        </View>
+
         <Pressable style={styles.photoButton} onPress={pickPhoto} disabled={uploadingPhoto}>
           {uploadingPhoto ? (
             <ActivityIndicator color={colors.primary} />
@@ -446,6 +479,12 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
     ...shadows.sm,
   },
+
+  scheduleOptions: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.xl },
+  scheduleBtn: { flex: 1, paddingVertical: 12, backgroundColor: colors.border, borderRadius: borderRadius.md, alignItems: "center" },
+  scheduleBtnActive: { backgroundColor: colors.primary, ...shadows.sm },
+  scheduleText: { fontSize: 14, fontWeight: "600", color: colors.textSecondary },
+  scheduleTextActive: { color: "#fff" },
 
   categoryList: { gap: spacing.md, paddingBottom: 40, paddingHorizontal: spacing.xl },
   categoryCard: {

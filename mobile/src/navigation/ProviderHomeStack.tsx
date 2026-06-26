@@ -7,7 +7,13 @@ const Stack = createNativeStackNavigator<ProviderHomeStackParamList>();
 
 export default function ProviderHomeStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        animation: "slide_from_right",
+        headerShadowVisible: false,
+        headerTitleStyle: { fontWeight: "600" }
+      }}
+    >
       <Stack.Screen
         name="ProviderHomeList"
         component={ProviderHomeScreen}

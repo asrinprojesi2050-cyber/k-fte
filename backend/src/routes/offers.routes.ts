@@ -8,8 +8,9 @@ export const offersRouter = Router();
 
 const createOfferSchema = z.object({
   requestId: z.string().uuid(),
-  price: z.number().positive(),
+  price: z.number().min(0),
   message: z.string().optional(),
+  isDiscovery: z.boolean().optional(),
 });
 
 offersRouter.post("/", requireAuth, requireRole("provider"), async (req, res) => {
@@ -30,6 +31,7 @@ offersRouter.post("/", requireAuth, requireRole("provider"), async (req, res) =>
       price: parsed.data.price,
       currency: request.currency,
       message: parsed.data.message,
+      isDiscovery: parsed.data.isDiscovery ?? false,
     },
   });
 
