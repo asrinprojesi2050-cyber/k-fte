@@ -129,8 +129,7 @@ export default function CustomerHomeScreen() {
                   <View style={styles.iconCircle}>
                     <Ionicons name={iconFor(cat.slug)} size={28} color={colors.primaryDark} />
                   </View>
-                  <Text style={styles.actionLabel}>{cat.nameTr}</Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                  <Text style={styles.actionLabel} numberOfLines={2}>{cat.nameTr}</Text>
                 </Pressable>
               ))}
             </View>
@@ -186,18 +185,27 @@ const styles = StyleSheet.create({
   emptyProviderTitle: { fontSize: 16, fontWeight: "bold", color: colors.primaryDark, marginBottom: 2 },
   emptyProviderText: { fontSize: 14, color: colors.textSecondary },
 
-  quickActions: { gap: spacing.md },
+  quickActions: { 
+    flexDirection: "row", 
+    flexWrap: "wrap", 
+    gap: spacing.md, 
+    justifyContent: "space-between",
+    maxWidth: 600,
+    alignSelf: "center",
+    width: "100%",
+  },
   actionCard: {
     backgroundColor: colors.card,
     borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    flexDirection: "row",
+    padding: spacing.md,
     alignItems: "center",
-    gap: spacing.lg,
+    justifyContent: "center",
+    width: "47%",
+    aspectRatio: 1, // square
     ...shadows.sm,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.03)"
+    borderColor: "rgba(0,0,0,0.03)",
   },
-  iconCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.background, justifyContent: "center", alignItems: "center" },
-  actionLabel: { fontSize: 17, fontWeight: "600", color: colors.text, flex: 1 },
+  iconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", marginBottom: spacing.md },
+  actionLabel: { fontSize: 14, fontWeight: "600", color: colors.text, textAlign: "center" },
 });
