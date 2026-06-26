@@ -192,14 +192,14 @@ export default function CreateRequestScreen() {
     return (
       <View style={styles.container}>
         <StepIndicator current={0} total={2} />
-        <View style={styles.headingRow}>
-          <Ionicons name="search" size={24} color={colors.primary} />
+        
+        <View style={styles.headerContainer}>
           <Text style={styles.heading}>Hangi hizmete ihtiyacın var?</Text>
+          <Text style={styles.subheading}>Sana en uygun ustaları bulmamız için bir kategori seçerek başla.</Text>
         </View>
-        <Text style={styles.subheading}>Bir kategori seçerek başla</Text>
 
         {catsLoading ? (
-          <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+          <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 40 }} />
         ) : (
           <ScrollView
             contentContainerStyle={styles.categoryList}
@@ -211,23 +211,23 @@ export default function CreateRequestScreen() {
                 <Pressable
                   key={cat.id}
                   style={[styles.categoryCard, active && styles.categoryCardActive]}
-                  onPress={() => { setCategoryId(cat.id); setStep(1); }}
+                  onPress={() => { setCategoryId(cat.id); setTimeout(() => setStep(1), 150); }}
                 >
                   <View style={[styles.catIconWrap, active && styles.catIconWrapActive]}>
                     <Ionicons
                       name={categoryIcon(cat.slug)}
-                      size={22}
-                      color={active ? "#fff" : colors.primary}
+                      size={28}
+                      color={active ? "#fff" : colors.primaryDark}
                     />
                   </View>
-                  <Text style={[styles.categoryText, active && styles.categoryTextActive]}>
+                  <Text style={[styles.categoryText, active && styles.categoryTextActive]} numberOfLines={2}>
                     {cat.nameTr}
                   </Text>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={18}
-                    color={active ? colors.primary : colors.textMuted}
-                  />
+                  {active && (
+                    <View style={styles.checkBadge}>
+                      <Ionicons name="checkmark" size={14} color="#fff" />
+                    </View>
+                  )}
                 </Pressable>
               );
             })}
@@ -486,30 +486,55 @@ const styles = StyleSheet.create({
   scheduleText: { fontSize: 14, fontWeight: "600", color: colors.textSecondary },
   scheduleTextActive: { color: "#fff" },
 
-  categoryList: { gap: spacing.md, paddingBottom: 40, paddingHorizontal: spacing.xl },
+  categoryList: { 
+    flexDirection: "row", 
+    flexWrap: "wrap", 
+    gap: spacing.md, 
+    justifyContent: "space-between",
+    paddingBottom: 40, 
+    paddingHorizontal: spacing.xl,
+    maxWidth: 600,
+    alignSelf: "center",
+    width: "100%",
+  },
   categoryCard: {
     backgroundColor: colors.card,
     borderRadius: borderRadius.xl,
-    padding: spacing.lg,
+    padding: spacing.md,
     borderWidth: 2,
     borderColor: "transparent",
-    flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
+    justifyContent: "center",
+    width: "47%",
+    aspectRatio: 1, // square
     ...shadows.sm,
+    position: "relative",
   },
   categoryCardActive: { borderColor: colors.primary, backgroundColor: colors.primaryLight, ...shadows.md },
   catIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.background,
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: spacing.md,
   },
   catIconWrapActive: { backgroundColor: colors.primary },
-  categoryText: { fontSize: 17, fontWeight: "600", color: colors.text, flex: 1 },
-  categoryTextActive: { color: colors.primaryDark },
+  categoryText: { fontSize: 14, fontWeight: "600", color: colors.text, textAlign: "center" },
+  categoryTextActive: { fontWeight: "700", color: colors.primaryDark },
+  checkBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: colors.primary,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    ...shadows.sm,
+  },
 
   submitButton: {
     backgroundColor: colors.primary,
