@@ -29,8 +29,8 @@ authRouter.post("/request-otp", otpLimiter, async (req, res) => {
 
   await sms.send(parsed.data.phone, `Köfte dogrulama kodunuz: ${code}`);
 
-  const isDev = process.env.NODE_ENV !== "production";
-  return res.json({ ok: true, ...(isDev ? { code } : {}) });
+  // Test asamasinda oldugumuz icin her zaman kodu donuyoruz:
+  return res.json({ ok: true, code });
 });
 
 const verifyCustomerSchema = z.object({

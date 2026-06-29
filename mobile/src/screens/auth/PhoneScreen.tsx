@@ -2,7 +2,7 @@ import { colors, spacing, borderRadius } from "../../theme";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, Alert } from "react-native";
 import { requestOtp } from "../../api/auth";
 import { AuthStackParamList } from "../../navigation/types";
 import { useTranslation } from "react-i18next";
@@ -24,7 +24,10 @@ export default function PhoneScreen({ route, navigation }: Props) {
     setError(null);
     setLoading(true);
     try {
-      await requestOtp(phone.trim());
+      const res = await requestOtp(phone.trim());
+      if (res.code) {
+        Alert.alert("📱 TEST SMS", `Gelen Doğrulama Kodu: ${res.code}\n\n(Not: Test aşamasında olduğumuz için SMS ekrana yansıtılmaktadır.)`);
+      }
       navigation.navigate("Otp", { role, phone: phone.trim() });
     } catch (err) {
       setError(t("code_send_failed"));

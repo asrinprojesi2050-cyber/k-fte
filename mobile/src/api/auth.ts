@@ -2,7 +2,7 @@ import { apiFetch } from "./client";
 import { AuthResult, Category, CustomerUser, ProviderUser, Role } from "./types";
 
 export function requestOtp(phone: string) {
-  return apiFetch<{ ok: true }>("/api/auth/request-otp", {
+  return apiFetch<{ ok: true; code?: string }>("/api/auth/request-otp", {
     method: "POST",
     body: { phone },
   });
